@@ -8,6 +8,11 @@ import { createAuthRouter } from "../../src/modules/auth/auth.routes.js";
 import { SessionModel } from "../../src/modules/auth/session.model.js";
 import { DoctorModel } from "../../src/modules/doctors/doctor.model.js";
 import { createDoctorRouter } from "../../src/modules/doctors/doctor.routes.js";
+import { PatientModel } from "../../src/modules/patients/patient.model.js";
+import {
+  createPatientRouter,
+  createScopedPatientRouter,
+} from "../../src/modules/patients/patient.routes.js";
 import { seedAdmin } from "../../src/scripts/seed-admin.js";
 import { createTestLogger } from "./logger.js";
 
@@ -41,6 +46,7 @@ try {
     AdminModel.syncIndexes(),
     SessionModel.syncIndexes(),
     DoctorModel.syncIndexes(),
+    PatientModel.syncIndexes(),
   ]);
   await seedAdmin({
     SEED_ADMIN_EMAIL: "browser-test@example.test",
@@ -52,7 +58,9 @@ try {
     isReady: checkMongoReadiness,
     registerRoutes: (expressApp) => {
       expressApp.use("/api/v1/auth", createAuthRouter(config));
+      expressApp.use("/api/v1/doctors/:doctorId/patients", createScopedPatientRouter(config));
       expressApp.use("/api/v1/doctors", createDoctorRouter(config));
+      expressApp.use("/api/v1/patients", createPatientRouter(config));
     },
   });
   server = createServer(app);

@@ -59,7 +59,16 @@ export const errorHandler: ErrorRequestHandler = (error, request, response, next
   const requestId = requestIdFromHeader(response.getHeader("X-Request-Id"));
 
   if (!normalized.isOperational) {
-    request.log.error({ err: error, requestId }, "Unhandled request error");
+    // Persistence errors may embed submitted values. Retain correlation and error
+    // classification without serializing patient fields, database messages or notes.
+    request.log.error(
+      {
+        errorType: error instanceof Error ? error.name : "UnknownError",
+        code: normalized.code,
+        requestId,
+      },
+      "Unhandled request error",
+    );
   }
 
   response.status(normalized.statusCode).json({
