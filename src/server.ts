@@ -4,6 +4,7 @@ import { createApp } from "./app.js";
 import { parseEnv } from "./config/env.js";
 import { createLogger } from "./config/logger.js";
 import { checkMongoReadiness, connectMongo, disconnectMongo } from "./database/mongo.js";
+import { createAuthRouter } from "./modules/auth/auth.routes.js";
 
 const config = parseEnv(process.env);
 const logger = createLogger({ level: config.LOG_LEVEL, nodeEnv: config.NODE_ENV });
@@ -55,6 +56,9 @@ async function start(): Promise<void> {
   const app = createApp({
     isReady: checkMongoReadiness,
     logger,
+    registerRoutes: (expressApp) => {
+      expressApp.use("/api/v1/auth", createAuthRouter(config));
+    },
     trustProxyHops: config.TRUST_PROXY_HOPS,
   });
   server = createServer(app);
