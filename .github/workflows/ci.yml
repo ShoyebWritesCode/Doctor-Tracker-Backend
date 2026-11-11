@@ -43,3 +43,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Check compiled Node.js module loading
+        run: npm run test:runtime

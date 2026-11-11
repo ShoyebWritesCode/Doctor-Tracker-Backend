@@ -46,6 +46,10 @@ function validationError(error: z.ZodError): AppError {
 
 export function createAuthRouter(config: AppConfig): Router {
   const router = Router();
+  router.use((_request, response, next) => {
+    response.setHeader("Cache-Control", "private, no-store");
+    next();
+  });
   const origin = requireTrustedOrigin(config.FRONTEND_ORIGIN, config.NODE_ENV);
   const [ipRateLimit, accountRateLimit] = createLoginRateLimiters(
     config.LOGIN_IP_LIMIT,

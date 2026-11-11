@@ -1,4 +1,4 @@
-import mongoose, { ConnectionStates } from "mongoose";
+import mongoose from "mongoose";
 import type { Logger } from "pino";
 
 type MongoOptions = {
@@ -16,13 +16,13 @@ export async function connectMongo({ logger, uri }: MongoOptions): Promise<void>
 }
 
 export async function disconnectMongo(logger: Logger): Promise<void> {
-  if (mongoose.connection.readyState === ConnectionStates.disconnected) return;
+  if (mongoose.connection.readyState === mongoose.STATES.disconnected) return;
   await mongoose.disconnect();
   logger.info("MongoDB connection closed");
 }
 
 export function isMongoConnected(): boolean {
-  return mongoose.connection.readyState === ConnectionStates.connected;
+  return mongoose.connection.readyState === mongoose.STATES.connected;
 }
 
 export async function checkMongoReadiness(): Promise<boolean> {

@@ -1,4 +1,4 @@
-import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import mongoose, { Schema, model, type InferSchemaType, type Model } from "mongoose";
 
 const sessionSchema = new Schema(
   {
@@ -22,4 +22,4 @@ export type Session = InferSchemaType<typeof sessionSchema>;
 export type SessionModel = Model<Session>;
 
 export const SessionModel =
-  (models.Session as SessionModel | undefined) ?? model<Session>("Session", sessionSchema);
+  (mongoose.models.Session as SessionModel | undefined) ?? model<Session>("Session", sessionSchema);

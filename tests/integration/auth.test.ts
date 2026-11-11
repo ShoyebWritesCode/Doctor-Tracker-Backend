@@ -78,6 +78,7 @@ describe("administrator authentication", () => {
         status: "active",
       },
     });
+    expect(login.headers["cache-control"]).toBe("private, no-store");
     expect(JSON.stringify(login.body)).not.toMatch(/password|tokenHash|correct horse/i);
     const cookieHeader: unknown = login.headers["set-cookie"];
     const cookie = Array.isArray(cookieHeader) ? String(cookieHeader[0]) : undefined;

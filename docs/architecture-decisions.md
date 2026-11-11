@@ -53,7 +53,7 @@ Session policy:
 - Domain: omitted, producing a host-only cookie.
 - Public registration, OAuth, password reset, MFA, and extra roles are out of scope.
 
-Middleware in the Next.js application may use cookie presence as a fast redirect hint, but only the API authorizes access. The browser never stores tokens in localStorage or sessionStorage.
+With `Path=/api/v1`, browsers do not send the session cookie to Next.js page routes. The frontend portal layout therefore waits for `/auth/me` in its client session boundary rather than using a cookie-presence redirect. Private data is served only through authorized API requests. Future private Server Component data requires its own authoritative session check. The browser never stores tokens in localStorage or sessionStorage.
 
 ## CSRF and mutation policy
 
