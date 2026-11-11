@@ -37,7 +37,8 @@ try {
   mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const config = parseEnv({
     NODE_ENV: "development",
-    FRONTEND_ORIGIN: "http://localhost:3000",
+    FRONTEND_ORIGIN: process.env.BROWSER_TEST_FRONTEND_ORIGIN ?? "http://localhost:3000",
+    PORT: process.env.BROWSER_TEST_API_PORT ?? "4000",
     MONGODB_URI: mongo.getUri("doctor_tracker_browser_tests"),
     LOGIN_IP_LIMIT: "100",
     LOGIN_ACCOUNT_LIMIT: "50",
@@ -68,10 +69,10 @@ try {
   server = createServer(app);
   await new Promise<void>((resolve, reject) => {
     server!.once("error", reject);
-    server!.listen(4000, "127.0.0.1", resolve);
+    server!.listen(config.PORT, "127.0.0.1", resolve);
   });
   process.stdout.write(
-    "Disposable authentication backend ready at http://127.0.0.1:4000. Stop with Ctrl+C.\n",
+    `Disposable authentication backend ready at http://127.0.0.1:${config.PORT}. Stop with Ctrl+C.\n`,
   );
   process.once("SIGINT", () => void stop());
   process.once("SIGTERM", () => void stop());
