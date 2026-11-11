@@ -1,0 +1,988 @@
+openapi: 3.1.0
+info:
+  title: Doctor Tracker API
+  version: 1.0.0-draft
+  description: REST contract for the Doctor Tracker administrative application.
+servers:
+  - url: http://localhost:4000
+    description: Local Express server
+  - url: /
+    description: Same-origin frontend proxy
+tags:
+  - name: Operations
+  - name: Authentication
+  - name: Doctors
+  - name: Patients
+  - name: Dashboard
+paths:
+  /health:
+    get:
+      tags: [Operations]
+      summary: Check process liveness
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /ready:
+    get:
+      tags: [Operations]
+      summary: Check application readiness
+      operationId: getReadiness
+      security: []
+      security: []
+      responses:
+        "200":
+          description: Application and database are ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /api/v1/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Create an administrator session
+      operationId: login
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated. Sets the opaque session cookie.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: HttpOnly Doctor Tracker session cookie.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/InvalidCredentials"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /api/v1/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke the current session
+      operationId: logout
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      responses:
+        "204":
+          description: Session revoked and cookie cleared.
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/auth/me:
+    get:
+      tags: [Authentication]
+      summary: Return the authenticated administrator
+      operationId: getCurrentAdmin
+      responses:
+        "200":
+          description: Current administrator.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminResponse"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+  /api/v1/doctors:
+    get:
+      tags: [Doctors]
+      summary: List doctors
+      operationId: listDoctors
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: search
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          description: Case-insensitive prefix search across name, email, and hospital.
+        - name: specialization
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: hospital
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 160
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+        - name: sort
+          in: query
+          schema:
+            $ref: "#/components/schemas/DoctorSort"
+      responses:
+        "200":
+          description: Paginated doctors.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorListResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+    post:
+      tags: [Doctors]
+      summary: Create a doctor
+      operationId: createDoctor
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDoctorInput"
+      responses:
+        "201":
+          description: Doctor created.
+          headers:
+            Location:
+              schema:
+                type: string
+              description: API path of the created doctor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/doctors/{doctorId}:
+    parameters:
+      - $ref: "#/components/parameters/DoctorId"
+    get:
+      tags: [Doctors]
+      summary: Get a doctor
+      operationId: getDoctor
+      responses:
+        "200":
+          description: Doctor details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/doctors/{doctorId}/patients:
+    parameters:
+      - $ref: "#/components/parameters/DoctorId"
+    get:
+      tags: [Patients]
+      summary: List patients assigned to a doctor
+      operationId: listDoctorPatients
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/PatientSearch"
+        - $ref: "#/components/parameters/Condition"
+        - $ref: "#/components/parameters/PatientStatus"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+        - $ref: "#/components/parameters/PatientSort"
+      responses:
+        "200":
+          description: Paginated patients for the doctor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientListResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Patients]
+      summary: Create a patient assigned to a doctor
+      operationId: createDoctorPatient
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientInput"
+      responses:
+        "201":
+          description: Patient created.
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/doctors/{doctorId}/patients/{patientId}:
+    parameters:
+      - $ref: "#/components/parameters/DoctorId"
+      - $ref: "#/components/parameters/PatientId"
+    delete:
+      tags: [Patients]
+      summary: Permanently delete a patient assigned to a doctor
+      operationId: deleteDoctorPatient
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      responses:
+        "204":
+          description: Patient deleted.
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/patients:
+    get:
+      tags: [Patients]
+      summary: List all patients
+      operationId: listPatients
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/PatientSearch"
+        - name: doctorId
+          in: query
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+        - $ref: "#/components/parameters/Condition"
+        - $ref: "#/components/parameters/PatientStatus"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+        - $ref: "#/components/parameters/PatientSort"
+      responses:
+        "200":
+          description: Paginated patients.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientListResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+  /api/v1/patients/{patientId}:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+    get:
+      tags: [Patients]
+      summary: Get a patient
+      operationId: getPatient
+      responses:
+        "200":
+          description: Patient details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Patients]
+      summary: Update mutable patient fields
+      operationId: updatePatient
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientInput"
+      responses:
+        "200":
+          description: Updated patient.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Patients]
+      summary: Permanently delete a patient
+      operationId: deletePatient
+      parameters:
+        - $ref: "#/components/parameters/Origin"
+      responses:
+        "204":
+          description: Patient deleted.
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/dashboard/summary:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard metrics and trends
+      operationId: getDashboardSummary
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/CalendarDate"
+          description: Inclusive start date in the requested time zone.
+        - name: to
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/CalendarDate"
+          description: Exclusive end date in the requested time zone.
+        - name: timezone
+          in: query
+          schema:
+            type: string
+            default: Asia/Dhaka
+            maxLength: 100
+          description: IANA time-zone name.
+      responses:
+        "200":
+          description: Dashboard summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/AuthenticationRequired"
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: doctor_tracker_session
+  parameters:
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uri
+      description: Must match the configured frontend origin for unsafe browser requests.
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    CreatedFrom:
+      name: createdFrom
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Inclusive creation timestamp.
+    CreatedTo:
+      name: createdTo
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Exclusive creation timestamp.
+    DoctorId:
+      name: doctorId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/ObjectId"
+    PatientId:
+      name: patientId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/ObjectId"
+    PatientSearch:
+      name: search
+      in: query
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+      description: Case-insensitive prefix search across name, email, and phone.
+    Condition:
+      name: condition
+      in: query
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 120
+    PatientStatus:
+      name: status
+      in: query
+      schema:
+        $ref: "#/components/schemas/PatientStatus"
+    PatientSort:
+      name: sort
+      in: query
+      schema:
+        $ref: "#/components/schemas/PatientSort"
+  schemas:
+    ObjectId:
+      type: string
+      pattern: "^[a-f0-9]{24}$"
+      examples: ["66b7a9b8e41f6f4d8c2a1091"]
+    CalendarDate:
+      type: string
+      format: date
+      examples: ["2026-11-01"]
+    PaginationMeta:
+      type: object
+      additionalProperties: false
+      required: [page, limit, total, totalPages]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+    Admin:
+      type: object
+      additionalProperties: false
+      required: [id, name, email, status, lastLoginAt, createdAt, updatedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        status:
+          type: string
+          enum: [active, disabled]
+        lastLoginAt:
+          type: [string, "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    LoginInput:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+    Doctor:
+      type: object
+      additionalProperties: false
+      required: [id, name, specialization, hospital, phone, email, patientCount, createdAt, updatedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+        specialization:
+          type: string
+        hospital:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        patientCount:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DoctorSummary:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+    CreateDoctorInput:
+      type: object
+      additionalProperties: false
+      required: [name, specialization, hospital, phone, email]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        specialization:
+          type: string
+          minLength: 2
+          maxLength: 100
+        hospital:
+          type: string
+          minLength: 2
+          maxLength: 160
+        phone:
+          type: string
+          minLength: 7
+          maxLength: 32
+        email:
+          type: string
+          format: email
+          maxLength: 254
+    DoctorSort:
+      type: string
+      enum: ["createdAt:desc", "createdAt:asc", "name:asc", "name:desc"]
+      default: "createdAt:desc"
+    PatientStatus:
+      type: string
+      enum: [active, follow_up, discharged]
+    PatientGender:
+      type: string
+      enum: [female, male, non_binary, prefer_not_to_say]
+    Patient:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - doctor
+        - name
+        - email
+        - phone
+        - dateOfBirth
+        - gender
+        - condition
+        - status
+        - lastVisitAt
+        - notes
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        doctor:
+          $ref: "#/components/schemas/DoctorSummary"
+        name:
+          type: string
+        email:
+          type: [string, "null"]
+          format: email
+        phone:
+          type: [string, "null"]
+        dateOfBirth:
+          oneOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        gender:
+          oneOf:
+            - $ref: "#/components/schemas/PatientGender"
+            - type: "null"
+        condition:
+          type: string
+        status:
+          $ref: "#/components/schemas/PatientStatus"
+        lastVisitAt:
+          type: [string, "null"]
+          format: date-time
+        notes:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreatePatientInput:
+      type: object
+      additionalProperties: false
+      required: [name, condition, status]
+      anyOf:
+        - required: [email]
+        - required: [phone]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          minLength: 7
+          maxLength: 32
+        dateOfBirth:
+          $ref: "#/components/schemas/CalendarDate"
+        gender:
+          $ref: "#/components/schemas/PatientGender"
+        condition:
+          type: string
+          minLength: 2
+          maxLength: 120
+        status:
+          $ref: "#/components/schemas/PatientStatus"
+        lastVisitAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          maxLength: 1000
+    UpdatePatientInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: [string, "null"]
+          format: email
+          maxLength: 254
+        phone:
+          type: [string, "null"]
+          minLength: 7
+          maxLength: 32
+        dateOfBirth:
+          oneOf:
+            - $ref: "#/components/schemas/CalendarDate"
+            - type: "null"
+        gender:
+          oneOf:
+            - $ref: "#/components/schemas/PatientGender"
+            - type: "null"
+        condition:
+          type: string
+          minLength: 2
+          maxLength: 120
+        status:
+          $ref: "#/components/schemas/PatientStatus"
+        lastVisitAt:
+          type: [string, "null"]
+          format: date-time
+        notes:
+          type: [string, "null"]
+          maxLength: 1000
+    PatientSort:
+      type: string
+      enum:
+        - "createdAt:desc"
+        - "createdAt:asc"
+        - "name:asc"
+        - "name:desc"
+        - "lastVisitAt:desc"
+        - "lastVisitAt:asc"
+      default: "createdAt:desc"
+    DashboardTotals:
+      type: object
+      additionalProperties: false
+      required: [doctors, patients, patientsCreatedInRange, averagePatientsPerDoctor]
+      properties:
+        doctors:
+          type: integer
+          minimum: 0
+        patients:
+          type: integer
+          minimum: 0
+        patientsCreatedInRange:
+          type: integer
+          minimum: 0
+        averagePatientsPerDoctor:
+          type: number
+          minimum: 0
+          multipleOf: 0.01
+    PatientsByDatePoint:
+      type: object
+      additionalProperties: false
+      required: [date, count]
+      properties:
+        date:
+          $ref: "#/components/schemas/CalendarDate"
+        count:
+          type: integer
+          minimum: 0
+    PatientsByDoctorPoint:
+      type: object
+      additionalProperties: false
+      required: [doctorId, doctorName, count]
+      properties:
+        doctorId:
+          $ref: "#/components/schemas/ObjectId"
+        doctorName:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+    DashboardSummary:
+      type: object
+      additionalProperties: false
+      required: [range, totals, patientsByDate, patientsByDoctor]
+      properties:
+        range:
+          type: object
+          additionalProperties: false
+          required: [from, to, timezone]
+          properties:
+            from:
+              $ref: "#/components/schemas/CalendarDate"
+            to:
+              $ref: "#/components/schemas/CalendarDate"
+            timezone:
+              type: string
+        totals:
+          $ref: "#/components/schemas/DashboardTotals"
+        patientsByDate:
+          type: array
+          items:
+            $ref: "#/components/schemas/PatientsByDatePoint"
+        patientsByDoctor:
+          type: array
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/PatientsByDoctorPoint"
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [code, message, requestId]
+      properties:
+        code:
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]+$"
+        message:
+          type: string
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        requestId:
+          type: string
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [ok]
+    AdminResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Admin"
+    DoctorResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Doctor"
+    DoctorListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Doctor"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    PatientResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Patient"
+    PatientListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Patient"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    DashboardResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/DashboardSummary"
+  responses:
+    ValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Please correct the highlighted fields.
+              fieldErrors:
+                email: [Enter a valid email address.]
+              requestId: 9cc28c9c-191b-4312-9f63-266e6b9be37a
+    InvalidCredentials:
+      description: Email or password is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: INVALID_CREDENTIALS
+              message: Email or password is incorrect.
+              requestId: 9cc28c9c-191b-4312-9f63-266e6b9be37a
+    AuthenticationRequired:
+      description: A valid administrator session is required.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The request is not allowed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: The request conflicts with existing state.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: Too many requests.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: Application is not ready.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+security:
+  - sessionCookie: []
