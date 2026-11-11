@@ -14,9 +14,10 @@ import {
   createPatientRouter,
   createScopedPatientRouter,
 } from "../../src/modules/patients/patient.routes.js";
-import { seedAdmin } from "../../src/scripts/seed-admin.js";
+import { hashPassword } from "../../src/modules/auth/password.js";
 import { createDashboardRouter } from "../../src/modules/dashboard/dashboard.routes.js";
 import { createTestLogger } from "./logger.js";
+import { buildDemoData } from "../../src/scripts/demo-data.js";
 
 // Explicit, disposable browser-test infrastructure. Never connects to an existing database.
 const logger = createTestLogger();
@@ -52,11 +53,27 @@ try {
     DoctorModel.syncIndexes(),
     PatientModel.syncIndexes(),
   ]);
-  await seedAdmin({
-    SEED_ADMIN_EMAIL: "browser-test@example.test",
-    SEED_ADMIN_NAME: "Browser Test Administrator",
-    SEED_ADMIN_PASSWORD: "fictional-browser-verification-only",
+  await AdminModel.create({
+    email: "browser-test@example.test",
+    name: "Browser Test Administrator",
+    passwordHash: await hashPassword("fictional-browser-verification-only"),
+    status: "active",
   });
+  if (process.env.BROWSER_TEST_DEMO_DATA === "1") {
+    const demo = buildDemoData(new Date());
+    const counts = new Map<string, number>();
+    for (const patient of demo.patients) {
+      const id = String(patient.doctorId);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    await DoctorModel.insertMany(
+      demo.doctors.map((doctor) => ({
+        ...doctor,
+        patientCount: counts.get(String(doctor._id)) ?? 0,
+      })),
+    );
+    await PatientModel.insertMany(demo.patients);
+  }
   const app = createApp({
     logger,
     isReady: checkMongoReadiness,

@@ -1,105 +1,161 @@
 # Doctor Tracker API
 
-The standalone REST API for Doctor Tracker, an authenticated administrative application for managing doctors, their patients, and operational analytics. The service is built with Express, strict TypeScript, MongoDB, and revocable opaque sessions.
+Doctor Tracker is an administrator workspace for doctors, their assigned patients and operational trends. This standalone Express/TypeScript API provides validated REST endpoints, revocable opaque sessions, transactional patient counts and date-aware analytics over MongoDB. It is deployed separately from its Next.js client and uses fictional records only.
 
-## Prerequisites
+[Live frontend](https://doctor-tracker-shoyeb.vercel.app) · [Frontend repository](https://github.com/ShoyebWritesCode/Doctor-Tracker-Frontend) · [API health](https://doctor-tracker-api-shoyeb.vercel.app/health) · [API readiness](https://doctor-tracker-api-shoyeb.vercel.app/ready) · [OpenAPI JSON](https://doctor-tracker-api-shoyeb.vercel.app/api-docs/openapi.json)
 
-- Node.js `22.17.1`
-- npm `10.9.2`
-- A MongoDB replica set (Atlas or a locally configured replica set) for transactional patient writes
+## Reviewer access
 
-## Local setup
+There is one actor: an administrator. Request the production demo password privately from the project owner; credentials are not published in Git. There is no public registration, email verification or doctor/patient login. Disposable credentials below do **not** authenticate to production. The [frontend README](https://github.com/ShoyebWritesCode/Doctor-Tracker-Frontend#readme) contains the product walkthrough and desktop/mobile screenshots.
+
+## Local installation
+
+Requirements: Node.js **22.17.1**, npm **10.9.2** and a transaction-capable MongoDB replica set. Both repositories commit their own lockfiles.
+
+```bash
+git clone https://github.com/ShoyebWritesCode/Doctor-Tracker-Backend.git
+git clone https://github.com/ShoyebWritesCode/Doctor-Tracker-Frontend.git
+cd Doctor-Tracker-Backend
+npm ci
+```
+
+### Disposable review: no Atlas or `.env`
+
+```bash
+BROWSER_TEST_DEMO_DATA=1 npm run test:auth-server
+```
+
+This creates a temporary replica set, 24 fictional doctors, 256 patients and `browser-test@example.test` / `fictional-browser-verification-only`. It does not read `.env` or connect to an existing database. The first run downloads a MongoDB test binary and needs network access. Start the frontend on `http://localhost:3000` using its README. Fixture edits last only until this server stops. Never reuse these credentials in a persistent deployment.
+
+### Persistent development
+
+Use your own Atlas replica-set URI or configure a local replica set. A standalone MongoDB server cannot execute patient transactions. One development-only Docker alternative (Docker required, loopback-only exposure):
+
+```bash
+docker run --name doctor-tracker-mongo -d \
+  -p 127.0.0.1:27017:27017 -v doctor-tracker-mongo-data:/data/db \
+  mongo:7.0.24 --replSet rs0 --bind_ip_all
+docker exec doctor-tracker-mongo mongosh --quiet --eval \
+  'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+```
+
+Wait for `docker exec doctor-tracker-mongo mongosh --quiet --eval 'db.hello().isWritablePrimary'` to return `true`. The named volume persists local data across container restarts. This optional Docker recipe is not a claimed verification on a machine without Docker; the disposable fixture is the automated setup-verification path.
 
 ```bash
 cp .env.example .env
-npm ci
+```
+
+Edit `.env`: supply the replica-set URI and replace `SEED_ADMIN_PASSWORD` with your own 12–128-character local password. Retain `FRONTEND_ORIGIN=http://localhost:3000` for the documented frontend. Then:
+
+```bash
 npm run seed:admin
+npm run seed:demo
+npm run seed:demo -- --apply
 npm run dev
 ```
 
-The API listens on `http://localhost:4000` by default. Check process liveness at `GET /health` and MongoDB readiness at `GET /ready`. The seed command is explicit and idempotent; application startup never creates accounts.
-
-## Fictional demo data
-
-After configuring the database, run `npm run seed:demo` to preview the missing demo records, then `npm run seed:demo -- --apply` to insert them explicitly. The dataset contains 24 doctors across 12 specialties and 256 patients, with varied statuses, conditions, contact completeness, birth dates, visits, and creation dates over roughly 90 days. Doctor counts include both seeded and manually added patients.
-
-All records are synthetic. Patient notes identify them as fictional, emails use reserved `.example.test` domains, and phone numbers use reserved `555-01xx` placeholders. No real patient information or clinical guidance is included.
-
-The seeder uses stable IDs and one transaction. It adds missing demo records only, preserves existing records and administrator edits, and rolls back on conflicts. Re-running it does not duplicate records or inflate doctor counts. Deliberately deleted demo records are considered missing and will be restored if the command is run again. It does not reset the database, reseed administrator credentials, or run on application startup or deployment.
-
-## Commands
-
-| Command                    | Purpose                                  |
-| -------------------------- | ---------------------------------------- |
-| `npm run dev`              | Run the API in watch mode                |
-| `npm run build`            | Compile production JavaScript to `dist/` |
-| `npm start`                | Run the compiled server                  |
-| `npm run seed:admin`       | Create or update the configured admin    |
-| `npm run lint`             | Run ESLint with zero warnings            |
-| `npm run typecheck`        | Check TypeScript without emitting files  |
-| `npm test`                 | Run Vitest in watch mode                 |
-| `npm run test:run`         | Run the test suite once                  |
-| `npm run test:runtime`     | Load compiled modules using native Node  |
-| `npm run test:auth-server` | Start disposable browser-test backend    |
-| `npm run test:coverage`    | Run tests with coverage                  |
-| `npm run test:load`        | Isolated, bounded read/login load smoke  |
-| `npm run format`           | Format supported files                   |
-| `npm run format:check`     | Check formatting without modifying files |
+`seed:demo` without `--apply` is a dry run. The API defaults to `http://localhost:4000`; `/health` reports liveness and `/ready` checks MongoDB. Sign in through the frontend with the administrator you configured. Startup never creates accounts or seeds records. Re-running `seed:admin` explicitly resets that administrator's password/status; it does not revoke existing sessions.
 
 ## Environment
 
-Copy `.env.example` to `.env`. Set `MONGODB_URI`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_NAME`, and a local-only `SEED_ADMIN_PASSWORD` before running the seed command. The application validates configuration before opening a port and refuses unsafe production combinations. Never commit `.env` or real credentials.
+See [`.env.example`](.env.example). Configuration is validated before listening. Never commit `.env`, database credentials, seed passwords or session cookies.
 
-## Vercel deployment
+| Variable                                                     | Local default/example          | Purpose                                                                                        |
+| ------------------------------------------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                                   | `development`                  | Production enforces HTTPS/Secure cookies and disables auto-indexing.                           |
+| `HOST`, `PORT`                                               | `0.0.0.0`, `4000`              | Standalone listener; serverless hosting owns its listener.                                     |
+| `MONGODB_URI`                                                | Replica-set URI in the example | Server-only database connection.                                                               |
+| `FRONTEND_ORIGIN`                                            | `http://localhost:3000`        | Exact allowed browser origin, no wildcard/path.                                                |
+| `SESSION_COOKIE_NAME`                                        | `doctor_tracker_session`       | Retain the default for the published client/contract.                                          |
+| `SESSION_TTL_HOURS`                                          | `12`                           | Absolute lifetime; allowed range 1–24 hours.                                                   |
+| `COOKIE_SECURE`                                              | `false` locally                | Must be `true` in production.                                                                  |
+| `TRUST_PROXY_HOPS`                                           | `0` locally                    | Current Vercel ingress uses 1; reassess if topology changes.                                   |
+| `LOGIN_IP_LIMIT`, `LOGIN_ACCOUNT_LIMIT`                      | `20`, `5`                      | Shared login budgets per 15-minute window.                                                     |
+| `API_RATE_LIMIT`                                             | `600`                          | Shared API budget per IP per 60-second window.                                                 |
+| `LOG_LEVEL`                                                  | `debug` in the example         | Use privacy-safe `info` logs in production.                                                    |
+| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_NAME`, `SEED_ADMIN_PASSWORD` | Fictional placeholders         | Explicit trusted bootstrap only; password minimum 12 characters. Not needed by normal runtime. |
 
-The root `index.ts` exports the Express application for Vercel; `src/server.ts` remains the standalone server with graceful shutdown. Both use the same route composition. Vercel connects to MongoDB lazily, shares one in-flight connection per instance, reuses warm connections, and caps each pool at five connections. Health checks do not require MongoDB; readiness checks do.
+The frontend alone uses `API_PROXY_TARGET` and `NEXT_PUBLIC_API_BASE_PATH`. Never expose backend secrets through `NEXT_PUBLIC_*`. Test-only `BROWSER_TEST_API_PORT`, `BROWSER_TEST_FRONTEND_ORIGIN` and `BROWSER_TEST_DEMO_DATA=1` configure the temporary fixture, not normal runtime.
 
-Login throttling uses atomic MongoDB counters shared across instances, not process-local memory. Keys are digests, windows are 15 minutes, expired counters have a TTL index, and throttled responses include `Retry-After`. If the shared store is unavailable, sign-in fails closed.
+## System architecture
 
-Before deploying, create all schema-defined indexes (including `login_attempt_expiry_ttl`) and seed the administrator explicitly from a trusted local environment. Production disables automatic index creation. Do not upload seed passwords to the hosting service.
+```mermaid
+flowchart LR
+  UI[Next.js browser UI] -->|same-origin /api/v1| Proxy[Next.js rewrite]
+  Proxy --> API[Express HTTP boundary]
+  API --> Auth[Origin + shared limits + session lookup]
+  Auth --> Domain[Validated domain modules]
+  Domain --> Mongo[(MongoDB replica set)]
+  Mongo --> DTO[Explicit public DTOs]
+  DTO --> UI
+```
 
-Set these production-only variables in the backend project's Vercel environment:
+Express is separate, not embedded in Next.js. Feature modules own schemas, routes, persistence and DTOs. Common middleware owns request IDs, safe errors, headers and limits. `createRuntimeApp` composes the same routing/security for the standalone process and Vercel adapter. Health/docs are read-only; domain routes require a live administrator session.
 
-| Variable           | Value                                                          |
-| ------------------ | -------------------------------------------------------------- |
-| `NODE_ENV`         | `production`                                                   |
-| `MONGODB_URI`      | Server-only Atlas connection string; mark sensitive            |
-| `FRONTEND_ORIGIN`  | Exact HTTPS production frontend origin                         |
-| `COOKIE_SECURE`    | `true`                                                         |
-| `TRUST_PROXY_HOPS` | `1` for the Vercel-managed proxy; reassess if topology changes |
+### Decision 1: opaque sessions rather than browser JWT storage
 
-The frontend sets server-only `API_PROXY_TARGET` to this backend's HTTPS origin and keeps browser requests on `/api/v1`. Session cookies stay HttpOnly, Secure, host-only, and scoped to `/api/v1`. Production Atlas credentials must not be made available to preview builds or the browser. Use separate infrastructure if authenticated previews are needed.
+Argon2id verifies the password. A random opaque token is returned only in a host-only HttpOnly cookie; MongoDB stores its SHA-256 digest, administrator reference and absolute expiry. Every protected request checks expiry and active administrator status. TTL cleanup is asynchronous, not an authorization mechanism. Logout revokes the session before clearing its cookie.
 
-`vercel.json` selects the Express framework and one Mumbai function region near the Atlas cluster. A Hobby deployment has dynamic outbound IPs; any broader Atlas network allowlist must be an explicit operator decision. Database authentication and TLS remain mandatory. Never enable paid networking automatically.
+The same-origin proxy keeps cookies first-party. Production requires Secure, SameSite=Lax, Path=/api/v1 and an exact allowed Origin for mutations. Tokens never enter browser storage. This adds a database lookup versus stateless JWT validation but makes revocation/account disabling straightforward. The administrator-only scope needs no third-party identity provider; MFA, recovery and extra roles need additional design.
 
-Verify `/health`, `/ready`, authentication, origin enforcement, private/no-store responses, and actual CRUD workflows after deployment. A successful build alone is not a successful release.
+### Decision 2: transactional counts and measured indexes
 
-## API contract
+Doctor lists/ranking read denormalized `patientCount` instead of aggregating every patient's doctor on each request. Patient insert/delete and count increment/decrement commit in one MongoDB transaction, including concurrent-delete protection. The transaction/write cost buys coherent counts; rollback, race and reconciliation tests verify this tradeoff.
 
-- Coverage, query/index evidence, load-test method and limitations: [`docs/testing-and-performance.md`](./docs/testing-and-performance.md)
-- Security, request limits, logging privacy, and lifecycle policy: [`docs/security-and-operations.md`](./docs/security-and-operations.md)
+Indexes follow concrete query shapes: normalized unique emails, stable creation/name order, doctor/condition/status filters and bounded ranking/count scans. Search is escaped literal prefix matching, not executable regex input. Explain-plan reports retain examined-key/document and residual-sort evidence rather than claiming every filter is index-only. Offset pagination suits this bounded demo; deep collections need measured cursor/search changes. See query reports below.
 
-- OpenAPI draft: [`docs/openapi.yaml`](./docs/openapi.yaml)
-- Accepted architecture decisions: [`docs/architecture-decisions.md`](./docs/architecture-decisions.md)
+## API and implementation guide
 
-## Current implementation status
+- Canonical [OpenAPI 3.1 source](docs/openapi.yaml), served read-only at `/api-docs/openapi.json`, without an interactive explorer. Contract tests compare health/readiness, administrator, doctor/patient/list, analytics and error responses against documented JSON Schemas.
+- [Architecture decisions](docs/architecture-decisions.md): envelopes, fields, session policy and scope.
+- [Doctor queries](docs/doctor-query-plans.md): create/detail, search/filter/sort and pagination.
+- [Patient API](docs/patient-api.md): scoped create/list/delete, global list/detail/patch/delete, immutable doctor assignment, date/null semantics and transactions.
+- [Dashboard](docs/dashboard-analytics.md): all-time totals/ranking, local-calendar ranges, zero-filled daily series and consistency limits.
+- [Security/operations](docs/security-and-operations.md): exact Origin/CORS, shared atomic limits, privacy-safe logs and lifecycle.
+- [Testing/performance](docs/testing-and-performance.md): coverage gates, races, query plans, bounded load and limitations.
+- [Submission checklist](docs/submission-checklist.md): requirement mapping and reviewer handoff.
 
-Phases 01-02 establish the service foundation, MongoDB lifecycle, administrator persistence, Argon2id password hashing, explicit seeding, origin enforcement, login throttling, and revocable `HttpOnly` sessions.
+## Commands and verification
 
-Phase 03 adds authenticated doctor creation (`POST /api/v1/doctors`), listing (`GET /api/v1/doctors`), and detail (`GET /api/v1/doctors/:doctorId`). Lists support literal prefix search, exact specialization/hospital filters, creation-date ranges, four stable sorts, and pagination capped at 100 records per page. Unknown fields and invalid queries return the documented validation envelope. Duplicate normalized emails return `409`.
+| Command                                              | Purpose                                                        |
+| ---------------------------------------------------- | -------------------------------------------------------------- |
+| `npm run dev`                                        | Standalone server in watch mode.                               |
+| `npm run build` / `npm start`                        | Compile to `dist/` / run compiled Node server.                 |
+| `npm run seed:admin`                                 | Explicitly create/update the configured administrator.         |
+| `npm run seed:demo` / `npm run seed:demo -- --apply` | Preview / insert missing fictional records.                    |
+| `npm run lint` / `npm run typecheck`                 | Zero-warning lint / strict type-check.                         |
+| `npm test` / `npm run test:run`                      | Watch / one-shot tests.                                        |
+| `npm run test:coverage`                              | All-source coverage with enforced gates.                       |
+| `npm run test:runtime`                               | Verify compiled native-Node imports.                           |
+| `npm run test:auth-server`                           | Real routes with disposable MongoDB and fictional credentials. |
+| `npm run test:load`                                  | Isolated bounded load smoke; never target production.          |
+| `npm run docs:check`                                 | Verify local documentation links.                              |
+| `npm run format` / `npm run format:check`            | Apply / check formatting.                                      |
 
-Index choices and measured fixture plans are documented in [`docs/doctor-query-plans.md`](./docs/doctor-query-plans.md). The disposable browser-test server also mounts the doctor routes for upcoming frontend integration work.
+```bash
+npm ci
+npm run format:check
+npm run lint
+npm run typecheck
+npm run test:coverage
+npm run build
+npm run test:runtime
+```
 
-Phase 04 adds doctor-scoped patient creation/listing/deletion and global patient listing/detail/patch/deletion. Patient creation and deletion update `Doctor.patientCount` in the same MongoDB transaction. Partial updates preserve at least one contact method even under concurrent edits. The doctor association is immutable. All routes require authentication, mutations require a trusted Origin, and responses disable caching.
+Tests create temporary databases, not Atlas connections. Frontend CI runs optimized desktop/mobile jobs against a reviewed, pinned backend revision. Standard integration fixtures start empty; only explicit documentation/review mode seeds the richer dataset.
 
-Transaction rules, null/date semantics, failure behavior, and measured patient index plans are documented in [`docs/patient-api.md`](./docs/patient-api.md).
+## Existing deployment and operations
 
-Phase 05 adds `GET /api/v1/dashboard/summary`: all-time doctor/patient totals, a rounded average, range-specific patient creation totals, zero-filled daily trends, and up to ten ranked doctors. Queries accept local calendar dates and an IANA time zone, with inclusive start, exclusive end, and a 366-day maximum. Reads require authentication and disable caching. Boundary rules, consistency semantics and measured query plans are documented in [`docs/dashboard-analytics.md`](./docs/dashboard-analytics.md).
+Both apps already run on Vercel. This documents the existing topology, not a request to reprovision infrastructure or tag another release. Root `index.ts` exports Express; `src/server.ts` retains the standalone listener/graceful shutdown. MongoDB connections are lazy, shared per warm function instance and capped at five per pool. `/health` is database-independent; `/ready` checks MongoDB. Standalone shutdown tests do not establish serverless lifecycle guarantees.
 
-## Authentication browser tests
+Backend production variables: `NODE_ENV=production`, server-only `MONGODB_URI`, `FRONTEND_ORIGIN=https://doctor-tracker-shoyeb.vercel.app`, `COOKIE_SECURE=true`, `TRUST_PROXY_HOPS=1`, and privacy-safe logging. The frontend proxies `/api/v1` to `https://doctor-tracker-api-shoyeb.vercel.app`. Production secrets are not shared with preview builds. `vercel.json` selects Express/Mumbai near Atlas; package engines select Node 22 even if the dashboard default differs.
 
-`npm run test:auth-server` starts the actual authentication, doctor, patient, and dashboard routes on port 4000 with an isolated, temporary MongoDB replica set. It creates the fictional account `browser-test@example.test` with password `fictional-browser-verification-only`. It does not read `.env` or connect to Atlas. All fixture data is discarded when the process stops.
+Production disables automatic indexes. Before using a new environment, create schema-declared indexes from trusted operator tooling using each model's `createIndexes()`, never destructive `syncIndexes()`. Seed the administrator explicitly, not at startup, and do not upload seed passwords to hosting. Shared login/API counters need their TTL indexes and fail closed if unavailable. Verify health/readiness and browser workflows after hosting changes.
 
-Run the frontend's authentication browser suite against this process from `http://localhost:3000`. Production origin validation remains enabled. Use these fixture credentials only for the disposable test server. To check the compiled application's native module loading, run `npm run build` followed by `npm run test:runtime`.
+The demo seeder uses stable IDs and one transaction, adds missing records without replacing administrator edits, does not inflate counts on re-run, and restores deleted demo records if explicitly rerun. It never resets the database or runs on deployment. Names/records are invented, emails use `.example.test`, and placeholder phone numbers are not real contacts.
 
-To verify changes without clearing a running preview's temporary records, launch a separate fixture with `BROWSER_TEST_API_PORT=4001 BROWSER_TEST_FRONTEND_ORIGIN=http://localhost:3001 npm run test:auth-server`. Configure the frontend browser suite with `E2E_BASE_URL=http://localhost:3001` and `API_PROXY_TARGET=http://localhost:4001`. These overrides apply only to the disposable browser helper; they do not change application defaults or bypass origin checks.
+## Boundaries and production-readiness limits
+
+This is not a certified health-data system. Do not enter real personal/clinical data. Permanent deletion has no recovery UI/audit history. Doctor update/delete, reassignment, extra roles, registration, email verification, recovery, billing and appointments are outside version 1. Analytics are current-record reads, not immutable history or one cross-query snapshot.
+
+Free/demo hosting is not a promise of network isolation, automated backups, restore drills, high availability or service-level objectives. Vercel Hobby can have dynamic outbound IPs; broader Atlas allowlisting is an operator tradeoff, not a production security guarantee. Before real-data use, review access/network restrictions, backups/restores, MFA/roles, audit/retention, monitoring, pool/concurrency budgets and representative load. Never enable paid networking automatically. Local load/Lighthouse measurements do not establish production throughput or field percentiles.

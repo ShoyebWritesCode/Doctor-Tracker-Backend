@@ -1,8 +1,8 @@
-# Doctor Tracker - Phase 00 Architecture Decisions
+# Doctor Tracker - Architecture Decisions
 
 Status: accepted for version 1
 
-This document freezes decisions shared by the backend and frontend before scaffolding begins. Changes require an explicit update here, in `openapi.yaml`, and in the frontend contract notes.
+This document records the accepted version 1 decisions shared by the backend and frontend. Changes require an explicit update here, in `openapi.yaml`, and in the frontend contract notes.
 
 ## Runtime and repository policy
 
@@ -212,9 +212,8 @@ Indexes are hypotheses, not decoration. Redundant or unused indexes will be remo
 
 ## Deferred decisions
 
-- Final hosting vendors and production URLs.
-- Final MongoDB Atlas project/cluster details.
+- Hosting and database are resolved: separate Vercel projects and a transaction-capable Atlas cluster in Mumbai. Live URLs are in both READMEs; secrets and account identifiers are not documentation content.
 - Error-monitoring vendor, if any.
 - A custom domain.
 
-These do not block Phases 01-07. They require human account access during Phase 08, and the user must be notified before that work begins.
+No new hosting or database provisioning is required for documentation/handoff. Error-monitoring vendor and custom domain remain optional; neither is represented as configured. Real-data network isolation, backups/restores and production service objectives remain separate operator work.
