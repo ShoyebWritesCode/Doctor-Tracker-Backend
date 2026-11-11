@@ -560,7 +560,8 @@ components:
     Doctor:
       type: object
       additionalProperties: false
-      required: [id, name, specialization, hospital, phone, email, patientCount, createdAt, updatedAt]
+      required:
+        [id, name, specialization, hospital, phone, email, patientCount, createdAt, updatedAt]
       properties:
         id:
           $ref: "#/components/schemas/ObjectId"

@@ -79,19 +79,19 @@ If deployment later requires `SameSite=None`, Phase 00 must be reopened and a sy
 
 Stable version 1 error codes:
 
-| Code | Typical status | Meaning |
-| --- | --- | --- |
-| `VALIDATION_ERROR` | 400 | Body, path, query, date range, or content validation failed |
-| `INVALID_CREDENTIALS` | 401 | Login credentials are invalid; account existence is not disclosed |
-| `AUTHENTICATION_REQUIRED` | 401 | Session is missing, invalid, expired, revoked, or no longer active |
-| `ORIGIN_NOT_ALLOWED` | 403 | Unsafe request origin failed the allowlist |
-| `DOCTOR_NOT_FOUND` | 404 | Doctor ID does not resolve |
-| `PATIENT_NOT_FOUND` | 404 | Patient ID does not resolve in the requested context |
-| `ROUTE_NOT_FOUND` | 404 | API route does not exist |
-| `DOCTOR_EMAIL_CONFLICT` | 409 | Normalized doctor email already exists |
-| `RATE_LIMITED` | 429 | Request limit was exceeded |
-| `INTERNAL_ERROR` | 500 | Unexpected production-safe failure |
-| `SERVICE_UNAVAILABLE` | 503 | Application is not ready to serve traffic |
+| Code                      | Typical status | Meaning                                                            |
+| ------------------------- | -------------- | ------------------------------------------------------------------ |
+| `VALIDATION_ERROR`        | 400            | Body, path, query, date range, or content validation failed        |
+| `INVALID_CREDENTIALS`     | 401            | Login credentials are invalid; account existence is not disclosed  |
+| `AUTHENTICATION_REQUIRED` | 401            | Session is missing, invalid, expired, revoked, or no longer active |
+| `ORIGIN_NOT_ALLOWED`      | 403            | Unsafe request origin failed the allowlist                         |
+| `DOCTOR_NOT_FOUND`        | 404            | Doctor ID does not resolve                                         |
+| `PATIENT_NOT_FOUND`       | 404            | Patient ID does not resolve in the requested context               |
+| `ROUTE_NOT_FOUND`         | 404            | API route does not exist                                           |
+| `DOCTOR_EMAIL_CONFLICT`   | 409            | Normalized doctor email already exists                             |
+| `RATE_LIMITED`            | 429            | Request limit was exceeded                                         |
+| `INTERNAL_ERROR`          | 500            | Unexpected production-safe failure                                 |
+| `SERVICE_UNAVAILABLE`     | 503            | Application is not ready to serve traffic                          |
 
 ## Search, filter, and sort behavior
 
