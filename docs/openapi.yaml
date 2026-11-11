@@ -261,6 +261,10 @@ paths:
       tags: [Patients]
       summary: List patients assigned to a doctor
       operationId: listDoctorPatients
+      description: >-
+        Resolves the doctor before listing. Supports server-side search, exact
+        condition/status filters, creation-date ranges, and stable pagination.
+        A doctorId query override is rejected. Missing doctors return DOCTOR_NOT_FOUND.
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Limit"
@@ -277,6 +281,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PatientListResponse"
+              examples:
+                patients:
+                  $ref: "#/components/examples/PatientList"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -287,6 +294,11 @@ paths:
       tags: [Patients]
       summary: Create a patient assigned to a doctor
       operationId: createDoctorPatient
+      description: >-
+        Creates the patient and increments the doctor's patientCount in one
+        transaction. Requires at least one contact method. The route determines
+        the immutable doctor association; unknown body fields are rejected.
+        A transaction-capable MongoDB replica set is required.
       parameters:
         - $ref: "#/components/parameters/Origin"
       requestBody:
@@ -295,6 +307,12 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CreatePatientInput"
+            example:
+              name: "Fictional Samira"
+              email: "samira@example.test"
+              condition: "Routine review"
+              status: active
+              dateOfBirth: "2000-02-29"
       responses:
         "201":
           description: Patient created.
@@ -302,10 +320,14 @@ paths:
             Location:
               schema:
                 type: string
+              description: Global patient API path, /api/v1/patients/{patientId}.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PatientResponse"
+              examples:
+                patient:
+                  $ref: "#/components/examples/PatientRecord"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -322,6 +344,10 @@ paths:
       tags: [Patients]
       summary: Permanently delete a patient assigned to a doctor
       operationId: deleteDoctorPatient
+      description: >-
+        Verifies doctor ownership, deletes the patient, and decrements the count
+        in one transaction. A cross-doctor or already deleted patient returns 404.
+        A failed count update aborts deletion; the count cannot become negative.
       parameters:
         - $ref: "#/components/parameters/Origin"
       responses:
@@ -340,6 +366,12 @@ paths:
       tags: [Patients]
       summary: List all patients
       operationId: listPatients
+      description: >-
+        Returns projected doctor ID/name summaries with each patient. Unknown or
+        repeated query keys and unsafe pagination offsets are rejected. A valid
+        nonexistent doctor filter returns an empty list. Search is a literal
+        prefix; phone formatting is normalized. Counts and page data are queried
+        concurrently and are not one transactional snapshot during concurrent writes.
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Limit"
@@ -360,6 +392,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PatientListResponse"
+              examples:
+                patients:
+                  $ref: "#/components/examples/PatientList"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -371,6 +406,7 @@ paths:
       tags: [Patients]
       summary: Get a patient
       operationId: getPatient
+      description: Returns a public patient DTO with explicit null optional fields. Invalid IDs return 400; missing patients return PATIENT_NOT_FOUND (404).
       responses:
         "200":
           description: Patient details.
@@ -378,6 +414,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PatientResponse"
+              examples:
+                patient:
+                  $ref: "#/components/examples/PatientRecord"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -388,6 +427,12 @@ paths:
       tags: [Patients]
       summary: Update mutable patient fields
       operationId: updatePatient
+      description: >-
+        Merges the patch with the stored patient inside a transaction, preserving
+        at least one contact method even under concurrent edits. Optional fields
+        may be cleared with null; empty patches, immutable fields, and unknown
+        fields return 400. Birth dates remain calendar strings; last-visit timestamps
+        are normalized to UTC. The doctor association cannot change.
       parameters:
         - $ref: "#/components/parameters/Origin"
       requestBody:
@@ -396,6 +441,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/UpdatePatientInput"
+            example:
+              status: follow_up
+              notes: null
       responses:
         "200":
           description: Updated patient.
@@ -403,6 +451,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PatientResponse"
+              examples:
+                patient:
+                  $ref: "#/components/examples/PatientRecord"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -415,6 +466,7 @@ paths:
       tags: [Patients]
       summary: Permanently delete a patient
       operationId: deletePatient
+      description: Deletes the patient and decrements its doctor's count transactionally. A repeated delete returns 404. Failed count updates roll back deletion and never permit negative counts.
       parameters:
         - $ref: "#/components/parameters/Origin"
       responses:
@@ -527,7 +579,7 @@ components:
         type: string
         minLength: 1
         maxLength: 100
-      description: Case-insensitive prefix search across name, email, and phone.
+      description: Literal case-insensitive name/email/phone prefix. Phone matching removes spaces, parentheses, plus signs, dots and hyphens from both the input and stored search key.
     Condition:
       name: condition
       in: query
@@ -545,6 +597,29 @@ components:
       in: query
       schema:
         $ref: "#/components/schemas/PatientSort"
+  examples:
+    PatientRecord:
+      summary: Fictional patient with a projected doctor summary
+      value:
+        data:
+          id: "507f1f77bcf86cd799439012"
+          doctor: { id: "507f1f77bcf86cd799439011", name: "Dr. Samira Khan" }
+          name: "Fictional Samira"
+          email: "samira@example.test"
+          phone: null
+          dateOfBirth: "2000-02-29"
+          gender: null
+          condition: "Routine review"
+          status: active
+          lastVisitAt: null
+          notes: null
+          createdAt: "2026-01-01T00:00:00.000Z"
+          updatedAt: "2026-01-01T00:00:00.000Z"
+    PatientList:
+      summary: Empty first page
+      value:
+        data: []
+        meta: { page: 1, limit: 20, total: 0, totalPages: 0 }
   schemas:
     ObjectId:
       type: string
@@ -808,6 +883,7 @@ components:
           maxLength: 1000
     PatientSort:
       type: string
+      description: All sorts use id in the same direction as a tiebreaker. Name uses normalized ordering. Null lastVisitAt values come first ascending and last descending.
       enum:
         - "createdAt:desc"
         - "createdAt:asc"

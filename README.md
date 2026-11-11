@@ -6,6 +6,7 @@ The standalone REST API for Doctor Tracker, an authenticated administrative appl
 
 - Node.js `22.17.1`
 - npm `10.9.2`
+- A MongoDB replica set (Atlas or a locally configured replica set) for transactional patient writes
 
 ## Local setup
 
@@ -53,8 +54,12 @@ Phase 03 adds authenticated doctor creation (`POST /api/v1/doctors`), listing (`
 
 Index choices and measured fixture plans are documented in [`docs/doctor-query-plans.md`](./docs/doctor-query-plans.md). The disposable browser-test server also mounts the doctor routes for upcoming frontend integration work.
 
+Phase 04 adds doctor-scoped patient creation/listing/deletion and global patient listing/detail/patch/deletion. Patient creation and deletion update `Doctor.patientCount` in the same MongoDB transaction. Partial updates preserve at least one contact method even under concurrent edits. The doctor association is immutable. All routes require authentication, mutations require a trusted Origin, and responses disable caching.
+
+Transaction rules, null/date semantics, failure behavior, and measured patient index plans are documented in [`docs/patient-api.md`](./docs/patient-api.md).
+
 ## Authentication browser tests
 
-`npm run test:auth-server` starts the actual authentication routes on port 4000 with an isolated, temporary MongoDB replica set. It creates the fictional account `browser-test@example.test` with password `fictional-browser-verification-only`. It does not read `.env` or connect to Atlas. All fixture data is discarded when the process stops.
+`npm run test:auth-server` starts the actual authentication, doctor, and patient routes on port 4000 with an isolated, temporary MongoDB replica set. It creates the fictional account `browser-test@example.test` with password `fictional-browser-verification-only`. It does not read `.env` or connect to Atlas. All fixture data is discarded when the process stops.
 
 Run the frontend's authentication browser suite against this process from `http://localhost:3000`. Production origin validation remains enabled. Use these fixture credentials only for the disposable test server. To check the compiled application's native module loading, run `npm run build` followed by `npm run test:runtime`.
