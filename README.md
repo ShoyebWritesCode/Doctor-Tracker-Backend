@@ -161,9 +161,3 @@ Backend production variables: `NODE_ENV=production`, server-only `MONGODB_URI`, 
 Production disables automatic indexes. Before using a new environment, create schema-declared indexes from trusted operator tooling using each model's `createIndexes()`, never destructive `syncIndexes()`. Seed the administrator explicitly, not at startup, and do not upload seed passwords to hosting. Shared login/API counters need their TTL indexes and fail closed if unavailable. Verify health/readiness and browser workflows after hosting changes.
 
 The demo seeder uses stable IDs and one transaction, adds missing records without replacing administrator edits, does not inflate counts on re-run, and restores deleted demo records if explicitly rerun. It never resets the database or runs on deployment. Names/records are invented, emails use `.example.test`, and placeholder phone numbers are not real contacts.
-
-## Boundaries and production-readiness limits
-
-This is not a certified health-data system. Do not enter real personal/clinical data. Permanent deletion has no recovery UI/audit history. Doctor update/delete, reassignment, extra roles, registration, email verification, recovery, billing and appointments are outside version 1. Analytics are current-record reads, not immutable history or one cross-query snapshot.
-
-Free/demo hosting is not a promise of network isolation, automated backups, restore drills, high availability or service-level objectives. Vercel Hobby can have dynamic outbound IPs; broader Atlas allowlisting is an operator tradeoff, not a production security guarantee. Before real-data use, review access/network restrictions, backups/restores, MFA/roles, audit/retention, monitoring, pool/concurrency budgets and representative load. Never enable paid networking automatically. Local load/Lighthouse measurements do not establish production throughput or field percentiles.
