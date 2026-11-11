@@ -1,9 +1,19 @@
 openapi: 3.1.0
 info:
   title: Doctor Tracker API
-  version: 1.0.0-draft
-  description: REST contract for the Doctor Tracker administrative application.
+  version: 1.0.0
+  description: >-
+    REST contract for the Doctor Tracker administrative demonstration. All records
+    are fictional. Protected routes require an active administrator and a revocable
+    opaque cookie (HttpOnly, Secure in production, SameSite=Lax, Path=/api/v1,
+    no Domain). Mutations require the exact configured frontend Origin.
+    Responses include X-Request-Id and Cache-Control private, no-store.
+    API requests can return 429 (Retry-After), 500 (generic production error)
+    or 503 (dependency unavailable), in the shared error envelope. JSON bodies
+    are limited to 100 KB; unsupported media types return 415 and oversized bodies 413.
 servers:
+  - url: https://doctor-tracker-api-shoyeb.vercel.app
+    description: Deployed Express API
   - url: http://localhost:4000
     description: Local Express server
   - url: /
@@ -15,6 +25,19 @@ tags:
   - name: Patients
   - name: Dashboard
 paths:
+  /api-docs/openapi.json:
+    get:
+      tags: [Operations]
+      summary: Read this OpenAPI document without an interactive explorer
+      operationId: getOpenApi
+      security: []
+      responses:
+        "200":
+          description: OpenAPI 3.1 document, not a data-envelope response.
+          content:
+            application/json:
+              schema:
+                type: object
   /health:
     get:
       tags: [Operations]
@@ -34,14 +57,13 @@ paths:
       summary: Check application readiness
       operationId: getReadiness
       security: []
-      security: []
       responses:
         "200":
           description: Application and database are ready.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthResponse"
+                $ref: "#/components/schemas/ReadinessResponse"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/auth/login:
@@ -1049,6 +1071,19 @@ components:
             status:
               type: string
               enum: [ok]
+    ReadinessResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [status]
+          properties:
+            status:
+              type: string
+              const: ready
     AdminResponse:
       type: object
       additionalProperties: false

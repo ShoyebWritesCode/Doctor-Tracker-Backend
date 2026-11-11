@@ -4,6 +4,7 @@ import { AppError } from "./common/errors/app-error.js";
 import { requestLogger } from "./common/http/request-logger.js";
 import { errorHandler } from "./common/middleware/error-handler.js";
 import { notFound } from "./common/middleware/not-found.js";
+import { openApiDocument } from "./openapi.js";
 import {
   exactOriginCors,
   requireJsonBody,
@@ -39,6 +40,11 @@ export function createApp(options: CreateAppOptions): Express {
 
   app.get("/health", (_request, response) => {
     response.status(200).json({ data: { status: "ok" } });
+  });
+
+  // Read-only contract; deliberately no interactive API explorer in production.
+  app.get("/api-docs/openapi.json", (_request, response) => {
+    response.status(200).json(openApiDocument);
   });
 
   app.get("/ready", async (_request, response, next) => {
