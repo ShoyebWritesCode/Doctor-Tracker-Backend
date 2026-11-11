@@ -1,5 +1,46 @@
 import type { RequestHandler } from "express";
+import {
+  contentSecurityPolicy,
+  crossOriginOpenerPolicy,
+  crossOriginResourcePolicy,
+  originAgentCluster,
+  referrerPolicy,
+  strictTransportSecurity,
+  xContentTypeOptions,
+  xDnsPrefetchControl,
+  xDownloadOptions,
+  xFrameOptions,
+  xPermittedCrossDomainPolicies,
+  xXssProtection,
+} from "helmet";
 import { AppError } from "../errors/app-error.js";
+
+/** Named exports work in both native Node ESM and Vercel's TypeScript loader. */
+export function securityHeaders(secureTransport: boolean): RequestHandler[] {
+  return [
+    contentSecurityPolicy({
+      useDefaults: false,
+      directives: {
+        "default-src": ["'none'"],
+        "base-uri": ["'none'"],
+        "form-action": ["'none'"],
+        "frame-ancestors": ["'none'"],
+        "upgrade-insecure-requests": secureTransport ? [] : null,
+      },
+    }),
+    crossOriginOpenerPolicy(),
+    crossOriginResourcePolicy(),
+    originAgentCluster(),
+    referrerPolicy(),
+    xContentTypeOptions(),
+    xDnsPrefetchControl(),
+    xDownloadOptions(),
+    xFrameOptions(),
+    xPermittedCrossDomainPolicies(),
+    xXssProtection(),
+    ...(secureTransport ? [strictTransportSecurity({ maxAge: 31_536_000 })] : []),
+  ];
+}
 
 export const requireJsonBody: RequestHandler = (request, _response, next) => {
   const hasBody =

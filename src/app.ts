@@ -1,11 +1,14 @@
 import express, { type Express } from "express";
-import helmet from "helmet";
 import type { Logger } from "pino";
 import { AppError } from "./common/errors/app-error.js";
 import { requestLogger } from "./common/http/request-logger.js";
 import { errorHandler } from "./common/middleware/error-handler.js";
 import { notFound } from "./common/middleware/not-found.js";
-import { exactOriginCors, requireJsonBody } from "./common/middleware/http-security.js";
+import {
+  exactOriginCors,
+  requireJsonBody,
+  securityHeaders,
+} from "./common/middleware/http-security.js";
 
 type CreateAppOptions = {
   isReady?: () => Promise<boolean>;
@@ -25,18 +28,7 @@ export function createApp(options: CreateAppOptions): Express {
     app.set("trust proxy", options.trustProxyHops);
   }
   app.use(requestLogger(options.logger));
-  app.use(
-    helmet({
-      strictTransportSecurity: options.secureTransport ? { maxAge: 31_536_000 } : false,
-      contentSecurityPolicy: {
-        directives: {
-          "default-src": ["'none'"],
-          "frame-ancestors": ["'none'"],
-          "upgrade-insecure-requests": options.secureTransport ? [] : null,
-        },
-      },
-    }),
-  );
+  app.use(securityHeaders(options.secureTransport ?? false));
   app.use((_request, response, next) => {
     response.setHeader("Cache-Control", "private, no-store");
     next();

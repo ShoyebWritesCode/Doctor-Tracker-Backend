@@ -1,5 +1,6 @@
 import type { Request, RequestHandler } from "express";
 import type { Logger } from "pino";
+import type {} from "../../types/express.js";
 import { createRequestId } from "./request-id.js";
 
 function routeTemplate(request: Request): string {
