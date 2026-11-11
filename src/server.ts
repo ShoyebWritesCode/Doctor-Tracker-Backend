@@ -1,16 +1,9 @@
 import "dotenv/config";
 import { createServer, type Server } from "node:http";
-import { createApp } from "./app.js";
+import { createRuntimeApp } from "./runtime.js";
 import { parseEnv } from "./config/env.js";
 import { createLogger } from "./config/logger.js";
-import { checkMongoReadiness, connectMongo, disconnectMongo } from "./database/mongo.js";
-import { createAuthRouter } from "./modules/auth/auth.routes.js";
-import { createDoctorRouter } from "./modules/doctors/doctor.routes.js";
-import { createDashboardRouter } from "./modules/dashboard/dashboard.routes.js";
-import {
-  createPatientRouter,
-  createScopedPatientRouter,
-} from "./modules/patients/patient.routes.js";
+import { connectMongo, disconnectMongo } from "./database/mongo.js";
 
 const config = parseEnv(process.env);
 const logger = createLogger({ level: config.LOG_LEVEL, nodeEnv: config.NODE_ENV });
@@ -59,18 +52,7 @@ async function start(): Promise<void> {
     return;
   }
 
-  const app = createApp({
-    isReady: checkMongoReadiness,
-    logger,
-    registerRoutes: (expressApp) => {
-      expressApp.use("/api/v1/auth", createAuthRouter(config));
-      expressApp.use("/api/v1/dashboard", createDashboardRouter(config));
-      expressApp.use("/api/v1/doctors/:doctorId/patients", createScopedPatientRouter(config));
-      expressApp.use("/api/v1/doctors", createDoctorRouter(config));
-      expressApp.use("/api/v1/patients", createPatientRouter(config));
-    },
-    trustProxyHops: config.TRUST_PROXY_HOPS,
-  });
+  const app = createRuntimeApp(config, logger);
   server = createServer(app);
   server.headersTimeout = 65_000;
   server.keepAliveTimeout = 5_000;
