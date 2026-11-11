@@ -23,9 +23,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:runtime": "node --input-type=module -e \"await import('./dist/modules/auth/auth.routes.js'); await import('./dist/modules/doctors/doctor.routes.js'); await import('./dist/modules/patients/patient.routes.js'); await import('./dist/modules/dashboard/dashboard.routes.js'); await import('./dist/database/mongo.js'); await import('./dist/scripts/seed-admin.js');\"",
+    "test:runtime": "node --input-type=module -e \"const { createRuntimeApp } = await import('./dist/runtime.js'); const { parseEnv } = await import('./dist/config/env.js'); const { createLogger } = await import('./dist/config/logger.js'); createRuntimeApp(parseEnv({ NODE_ENV: 'test', MONGODB_URI: 'mongodb://unused/runtime_check', FRONTEND_ORIGIN: 'http://localhost:3000' }), createLogger({ nodeEnv: 'test', level: 'silent' })); await import('./dist/scripts/seed-admin.js'); await import('./dist/scripts/seed-demo.js');\"",
     "test:auth-server": "tsx tests/helpers/auth-browser-server.ts",
     "test:coverage": "vitest run --coverage",
+    "test:load": "tsx tests/performance/read-load.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

@@ -38,8 +38,8 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      - name: Test
-        run: npm run test:run
+      - name: Test with all-source coverage gates
+        run: npm run test:coverage
 
       - name: Build
         run: npm run build
