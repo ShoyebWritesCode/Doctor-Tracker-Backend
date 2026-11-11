@@ -1,26 +1,49 @@
 import express, { type Express } from "express";
+import helmet from "helmet";
 import type { Logger } from "pino";
 import { AppError } from "./common/errors/app-error.js";
 import { requestLogger } from "./common/http/request-logger.js";
 import { errorHandler } from "./common/middleware/error-handler.js";
 import { notFound } from "./common/middleware/not-found.js";
+import { exactOriginCors, requireJsonBody } from "./common/middleware/http-security.js";
 
 type CreateAppOptions = {
   isReady?: () => Promise<boolean>;
   logger: Logger;
   registerRoutes?: (app: Express) => void;
   trustProxyHops?: number;
+  frontendOrigin?: string;
+  secureTransport?: boolean;
 };
 
 export function createApp(options: CreateAppOptions): Express {
   const app = express();
 
   app.disable("x-powered-by");
+  app.set("query parser", "simple");
   if (options.trustProxyHops && options.trustProxyHops > 0) {
     app.set("trust proxy", options.trustProxyHops);
   }
   app.use(requestLogger(options.logger));
-  app.use(express.json({ limit: "100kb" }));
+  app.use(
+    helmet({
+      strictTransportSecurity: options.secureTransport ? { maxAge: 31_536_000 } : false,
+      contentSecurityPolicy: {
+        directives: {
+          "default-src": ["'none'"],
+          "frame-ancestors": ["'none'"],
+          "upgrade-insecure-requests": options.secureTransport ? [] : null,
+        },
+      },
+    }),
+  );
+  app.use((_request, response, next) => {
+    response.setHeader("Cache-Control", "private, no-store");
+    next();
+  });
+  if (options.frontendOrigin) app.use("/api/v1", exactOriginCors(options.frontendOrigin));
+  app.use(requireJsonBody);
+  app.use(express.json({ limit: "100kb", inflate: false }));
 
   app.get("/health", (_request, response) => {
     response.status(200).json({ data: { status: "ok" } });

@@ -20,6 +20,7 @@ const config: AppConfig = Object.freeze({
   HOST: "127.0.0.1",
   LOGIN_ACCOUNT_LIMIT: 20,
   LOGIN_IP_LIMIT: 50,
+  API_RATE_LIMIT: 600,
   LOG_LEVEL: "silent",
   MONGODB_URI: "mongodb://unused/doctor_tracker",
   NODE_ENV: "test",

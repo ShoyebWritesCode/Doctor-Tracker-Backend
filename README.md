@@ -75,6 +75,8 @@ Verify `/health`, `/ready`, authentication, origin enforcement, private/no-store
 
 ## API contract
 
+- Security, request limits, logging privacy, and lifecycle policy: [`docs/security-and-operations.md`](./docs/security-and-operations.md)
+
 - OpenAPI draft: [`docs/openapi.yaml`](./docs/openapi.yaml)
 - Accepted architecture decisions: [`docs/architecture-decisions.md`](./docs/architecture-decisions.md)
 

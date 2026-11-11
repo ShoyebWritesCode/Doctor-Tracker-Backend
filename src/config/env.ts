@@ -34,6 +34,7 @@ const envSchema = z.object({
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(2).default(0),
   LOGIN_IP_LIMIT: z.coerce.number().int().min(1).max(100).default(20),
   LOGIN_ACCOUNT_LIMIT: z.coerce.number().int().min(1).max(50).default(5),
+  API_RATE_LIMIT: z.coerce.number().int().min(1).max(10_000).default(600),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
 });
 

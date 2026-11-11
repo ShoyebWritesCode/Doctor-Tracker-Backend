@@ -1,30 +1,38 @@
 import pino, { type Logger, type LoggerOptions } from "pino";
+import { safeErrorDetails } from "../common/http/safe-error.js";
 
 type LoggerConfig = {
   level: string;
   nodeEnv: "development" | "test" | "production";
 };
 
-const redactPaths = [
-  "req.headers.authorization",
-  "req.headers.cookie",
-  "request.headers.authorization",
-  "request.headers.cookie",
+const privateFields = [
   "password",
+  "passwordHash",
   "token",
+  "tokenHash",
   "session",
-  "*.password",
-  "*.token",
-  "*.session",
+  "cookie",
+  "authorization",
+  "body",
+  "query",
+  "headers",
+  "email",
+  "phone",
+  "notes",
+  "MONGODB_URI",
+  "uri",
 ];
+const redactPaths = privateFields.flatMap((field) => [field, `*.${field}`]);
 
-export function createLogger(config: LoggerConfig): Logger {
+export function createLogger(config: LoggerConfig, destination?: pino.DestinationStream): Logger {
   const options: LoggerOptions = {
     base: {
       environment: config.nodeEnv,
       service: "doctor-tracker-api",
     },
     level: config.nodeEnv === "test" ? "silent" : config.level,
+    serializers: { err: safeErrorDetails },
     redact: {
       censor: "[REDACTED]",
       paths: redactPaths,
@@ -32,7 +40,7 @@ export function createLogger(config: LoggerConfig): Logger {
     timestamp: pino.stdTimeFunctions.isoTime,
   };
 
-  if (config.nodeEnv === "development") {
+  if (config.nodeEnv === "development" && !destination) {
     return pino(
       options,
       pino.transport({
@@ -46,5 +54,5 @@ export function createLogger(config: LoggerConfig): Logger {
     );
   }
 
-  return pino(options);
+  return destination ? pino(options, destination) : pino(options);
 }

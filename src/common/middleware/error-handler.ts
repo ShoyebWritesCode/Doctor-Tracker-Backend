@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from "express";
 import { AppError } from "../errors/app-error.js";
+import { safeErrorDetails } from "../http/safe-error.js";
 
 type ErrorWithStatus = Error & {
   status?: number;
@@ -16,7 +17,7 @@ function requestIdFromHeader(value: number | string | string[] | undefined): str
 }
 
 function normalizeError(error: unknown): AppError {
-  if (error instanceof AppError) {
+  if (error instanceof AppError && error.isOperational && error.statusCode !== 500) {
     return error;
   }
 
@@ -28,6 +29,14 @@ function normalizeError(error: unknown): AppError {
         code: "VALIDATION_ERROR",
         message: "Request body contains invalid JSON.",
         statusCode: 400,
+      });
+    }
+
+    if (httpError.type === "encoding.unsupported" || httpError.type === "charset.unsupported") {
+      return new AppError({
+        code: "UNSUPPORTED_MEDIA_TYPE",
+        message: "The request encoding is not supported.",
+        statusCode: 415,
       });
     }
 
@@ -49,9 +58,20 @@ function normalizeError(error: unknown): AppError {
   });
 }
 
-export const errorHandler: ErrorRequestHandler = (error, request, response, next) => {
+// Express recognizes error middleware by its four-argument arity, even without delegation.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const errorHandler: ErrorRequestHandler = (error, request, response, _next) => {
   if (response.headersSent) {
-    next(error);
+    // Express's default handler prints the raw exception. Close a partial response
+    // ourselves so a late database error cannot leak patient values to stderr.
+    request.log.error(
+      {
+        ...safeErrorDetails(error),
+        requestId: requestIdFromHeader(response.getHeader("X-Request-Id")),
+      },
+      "Response failed after headers were sent",
+    );
+    response.destroy();
     return;
   }
 
@@ -63,7 +83,7 @@ export const errorHandler: ErrorRequestHandler = (error, request, response, next
     // classification without serializing patient fields, database messages or notes.
     request.log.error(
       {
-        errorType: error instanceof Error ? error.name : "UnknownError",
+        ...safeErrorDetails(error),
         code: normalized.code,
         requestId,
       },

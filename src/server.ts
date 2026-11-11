@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { createServer, type Server } from "node:http";
+import type { Server } from "node:http";
+import { createHttpServer, closeHttpServer } from "./common/http/server-policy.js";
 import { createRuntimeApp } from "./runtime.js";
 import { parseEnv } from "./config/env.js";
 import { createLogger } from "./config/logger.js";
@@ -9,12 +10,6 @@ const config = parseEnv(process.env);
 const logger = createLogger({ level: config.LOG_LEVEL, nodeEnv: config.NODE_ENV });
 let server: Server | undefined;
 let shuttingDown = false;
-
-function closeServer(httpServer: Server): Promise<void> {
-  return new Promise((resolve, reject) => {
-    httpServer.close((error) => (error ? reject(error) : resolve()));
-  });
-}
 
 async function shutdown(reason: string, exitCode: number): Promise<void> {
   if (shuttingDown) return;
@@ -29,7 +24,7 @@ async function shutdown(reason: string, exitCode: number): Promise<void> {
   forceExitTimer.unref();
 
   try {
-    if (server) await closeServer(server);
+    if (server) await closeHttpServer(server);
     await disconnectMongo(logger);
     clearTimeout(forceExitTimer);
     logger.flush();
@@ -53,10 +48,7 @@ async function start(): Promise<void> {
   }
 
   const app = createRuntimeApp(config, logger);
-  server = createServer(app);
-  server.headersTimeout = 65_000;
-  server.keepAliveTimeout = 5_000;
-  server.requestTimeout = 30_000;
+  server = createHttpServer(app);
   server.on("error", (error) => {
     logger.fatal({ err: error }, "API server failed");
     void shutdown("server error", 1);
