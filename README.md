@@ -49,6 +49,10 @@ Copy `.env.example` to `.env`. Set `MONGODB_URI`, `SEED_ADMIN_EMAIL`, `SEED_ADMI
 
 Phases 01-02 establish the service foundation, MongoDB lifecycle, administrator persistence, Argon2id password hashing, explicit seeding, origin enforcement, login throttling, and revocable `HttpOnly` sessions.
 
+Phase 03 adds authenticated doctor creation (`POST /api/v1/doctors`), listing (`GET /api/v1/doctors`), and detail (`GET /api/v1/doctors/:doctorId`). Lists support literal prefix search, exact specialization/hospital filters, creation-date ranges, four stable sorts, and pagination capped at 100 records per page. Unknown fields and invalid queries return the documented validation envelope. Duplicate normalized emails return `409`.
+
+Index choices and measured fixture plans are documented in [`docs/doctor-query-plans.md`](./docs/doctor-query-plans.md). The disposable browser-test server also mounts the doctor routes for upcoming frontend integration work.
+
 ## Authentication browser tests
 
 `npm run test:auth-server` starts the actual authentication routes on port 4000 with an isolated, temporary MongoDB replica set. It creates the fictional account `browser-test@example.test` with password `fictional-browser-verification-only`. It does not read `.env` or connect to Atlas. All fixture data is discarded when the process stops.

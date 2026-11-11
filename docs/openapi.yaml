@@ -111,6 +111,11 @@ paths:
       tags: [Doctors]
       summary: List doctors
       operationId: listDoctors
+      description: >-
+        Returns public doctor fields and pagination metadata. Unknown query keys,
+        repeated parameters, invalid timestamps, and unsafe pagination offsets are rejected.
+        Name ordering uses normalized names; every sort uses id in the same direction
+        as a deterministic tiebreaker. Pages beyond the last page return an empty data array.
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Limit"
@@ -120,15 +125,17 @@ paths:
             type: string
             minLength: 1
             maxLength: 100
-          description: Case-insensitive prefix search across name, email, and hospital.
+          description: Case-insensitive literal prefix search across normalized name, email, and hospital. Regex metacharacters are escaped.
         - name: specialization
           in: query
+          description: Exact match after Unicode, whitespace, and case normalization.
           schema:
             type: string
             minLength: 1
             maxLength: 100
         - name: hospital
           in: query
+          description: Exact match after Unicode, whitespace, and case normalization.
           schema:
             type: string
             minLength: 1
@@ -146,6 +153,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DoctorListResponse"
+              example:
+                data:
+                  - id: "507f1f77bcf86cd799439011"
+                    name: "Dr. Samira Khan"
+                    specialization: "Cardiology"
+                    hospital: "Central Hospital"
+                    phone: "+880 1700 000001"
+                    email: "samira@example.test"
+                    patientCount: 0
+                    createdAt: "2026-01-01T00:00:00.000Z"
+                    updatedAt: "2026-01-01T00:00:00.000Z"
+                meta: { page: 1, limit: 20, total: 1, totalPages: 1 }
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -154,6 +173,10 @@ paths:
       tags: [Doctors]
       summary: Create a doctor
       operationId: createDoctor
+      description: >-
+        Requires an active administrator session and trusted Origin. Display fields
+        are trimmed and retain casing. Email is trimmed, lowercased, and unique.
+        patientCount is server-owned and starts at zero. Unknown body fields are rejected.
       parameters:
         - $ref: "#/components/parameters/Origin"
       requestBody:
@@ -162,6 +185,12 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CreateDoctorInput"
+            example:
+              name: "Dr. Samira Khan"
+              specialization: "Cardiology"
+              hospital: "Central Hospital"
+              phone: "+880 1700 000001"
+              email: "samira@example.test"
       responses:
         "201":
           description: Doctor created.
@@ -174,6 +203,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DoctorResponse"
+              example:
+                data:
+                  id: "507f1f77bcf86cd799439011"
+                  name: "Dr. Samira Khan"
+                  specialization: "Cardiology"
+                  hospital: "Central Hospital"
+                  phone: "+880 1700 000001"
+                  email: "samira@example.test"
+                  patientCount: 0
+                  createdAt: "2026-01-01T00:00:00.000Z"
+                  updatedAt: "2026-01-01T00:00:00.000Z"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -189,6 +229,7 @@ paths:
       tags: [Doctors]
       summary: Get a doctor
       operationId: getDoctor
+      description: Returns the public doctor DTO. Malformed IDs return 400; valid IDs without a matching record return DOCTOR_NOT_FOUND (404).
       responses:
         "200":
           description: Doctor details.
@@ -196,6 +237,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DoctorResponse"
+              example:
+                data:
+                  id: "507f1f77bcf86cd799439011"
+                  name: "Dr. Samira Khan"
+                  specialization: "Cardiology"
+                  hospital: "Central Hospital"
+                  phone: "+880 1700 000001"
+                  email: "samira@example.test"
+                  patientCount: 0
+                  createdAt: "2026-01-01T00:00:00.000Z"
+                  updatedAt: "2026-01-01T00:00:00.000Z"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
