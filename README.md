@@ -1,8 +1,15 @@
 # Doctor Tracker API
 
+> [!IMPORTANT]
+> **THIS PROJECT HAS TWO READMEs — PLEASE READ BOTH.**
+>
+> You are reading the **Backend README** (API, MongoDB, authentication and server setup).
+>
+> **[→ OPEN THE FRONTEND README: live application, screenshots and client setup](https://github.com/ShoyebWritesCode/Doctor-Tracker-Frontend/blob/main/README.md)**
+
 Doctor Tracker is an administrator workspace for doctors, their assigned patients and operational trends. This standalone Express/TypeScript API provides validated REST endpoints, revocable opaque sessions, transactional patient counts and date-aware analytics over MongoDB. It is deployed separately from its Next.js client and uses fictional records only.
 
-[Live frontend](https://doctor-tracker-shoyeb.vercel.app) · [Frontend repository](https://github.com/ShoyebWritesCode/Doctor-Tracker-Frontend) · [API health](https://doctor-tracker-api-shoyeb.vercel.app/health) · [API readiness](https://doctor-tracker-api-shoyeb.vercel.app/ready) · [OpenAPI JSON](https://doctor-tracker-api-shoyeb.vercel.app/api-docs/openapi.json)
+[Live application](https://doctor-tracker-shoyeb.vercel.app) · [Frontend repository](https://github.com/ShoyebWritesCode/Doctor-Tracker-Frontend) · [API health](https://doctor-tracker-api-shoyeb.vercel.app/health) · [API readiness](https://doctor-tracker-api-shoyeb.vercel.app/ready) · [OpenAPI JSON](https://doctor-tracker-api-shoyeb.vercel.app/api-docs/openapi.json)
 
 ## Reviewer access
 
