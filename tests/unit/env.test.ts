@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EnvironmentConfigError, parseEnv } from "../../src/config/env.js";
+import { EnvironmentConfigError, parseEnv, parseSeedEnv } from "../../src/config/env.js";
 
 const validEnvironment: NodeJS.ProcessEnv = {
   COOKIE_SECURE: "false",
@@ -53,5 +53,16 @@ describe("environment configuration", () => {
     const config = parseEnv({ ...validEnvironment, FRONTEND_ORIGIN: "http://localhost:3000/" });
 
     expect(config.FRONTEND_ORIGIN).toBe("http://localhost:3000");
+  });
+
+  it("validates and normalizes explicit administrator seed settings", () => {
+    const seed = parseSeedEnv({
+      SEED_ADMIN_EMAIL: "  ADMIN@Example.Test ",
+      SEED_ADMIN_NAME: "Demo Administrator",
+      SEED_ADMIN_PASSWORD: "a local password with sufficient length",
+    });
+
+    expect(seed.SEED_ADMIN_EMAIL).toBe("admin@example.test");
+    expect(() => parseSeedEnv({ SEED_ADMIN_PASSWORD: "short" })).toThrow(EnvironmentConfigError);
   });
 });
