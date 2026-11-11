@@ -6,6 +6,7 @@ import { createLogger } from "./config/logger.js";
 import { checkMongoReadiness, connectMongo, disconnectMongo } from "./database/mongo.js";
 import { createAuthRouter } from "./modules/auth/auth.routes.js";
 import { createDoctorRouter } from "./modules/doctors/doctor.routes.js";
+import { createDashboardRouter } from "./modules/dashboard/dashboard.routes.js";
 import {
   createPatientRouter,
   createScopedPatientRouter,
@@ -63,6 +64,7 @@ async function start(): Promise<void> {
     logger,
     registerRoutes: (expressApp) => {
       expressApp.use("/api/v1/auth", createAuthRouter(config));
+      expressApp.use("/api/v1/dashboard", createDashboardRouter(config));
       expressApp.use("/api/v1/doctors/:doctorId/patients", createScopedPatientRouter(config));
       expressApp.use("/api/v1/doctors", createDoctorRouter(config));
       expressApp.use("/api/v1/patients", createPatientRouter(config));

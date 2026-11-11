@@ -14,6 +14,7 @@ import {
   createScopedPatientRouter,
 } from "../../src/modules/patients/patient.routes.js";
 import { seedAdmin } from "../../src/scripts/seed-admin.js";
+import { createDashboardRouter } from "../../src/modules/dashboard/dashboard.routes.js";
 import { createTestLogger } from "./logger.js";
 
 // Explicit, disposable browser-test infrastructure. Never connects to an existing database.
@@ -58,6 +59,7 @@ try {
     isReady: checkMongoReadiness,
     registerRoutes: (expressApp) => {
       expressApp.use("/api/v1/auth", createAuthRouter(config));
+      expressApp.use("/api/v1/dashboard", createDashboardRouter(config));
       expressApp.use("/api/v1/doctors/:doctorId/patients", createScopedPatientRouter(config));
       expressApp.use("/api/v1/doctors", createDoctorRouter(config));
       expressApp.use("/api/v1/patients", createPatientRouter(config));
