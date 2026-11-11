@@ -26,6 +26,21 @@ describe("application foundation", () => {
     expect(requestId).toMatch(/^[A-Za-z0-9._-]+$/);
   });
 
+  it("reports dependency readiness without exposing database details", async () => {
+    await request(createApp({ isReady: () => Promise.resolve(true), logger: createTestLogger() }))
+      .get("/ready")
+      .expect(200, { data: { status: "ready" } });
+
+    const unavailable = await request(
+      createApp({ isReady: () => Promise.resolve(false), logger: createTestLogger() }),
+    )
+      .get("/ready")
+      .expect(503);
+    expect(unavailable.body as unknown).toMatchObject({
+      error: { code: "SERVICE_UNAVAILABLE" },
+    });
+  });
+
   it("preserves a trusted inbound request ID", async () => {
     const response = await request(buildApp())
       .get("/health")

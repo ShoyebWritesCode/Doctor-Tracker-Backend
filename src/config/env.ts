@@ -31,6 +31,9 @@ const envSchema = z.object({
     .default("doctor_tracker_session"),
   SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24).default(12),
   COOKIE_SECURE: booleanString.default(false),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(2).default(0),
+  LOGIN_IP_LIMIT: z.coerce.number().int().min(1).max(100).default(20),
+  LOGIN_ACCOUNT_LIMIT: z.coerce.number().int().min(1).max(50).default(5),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
 });
 
@@ -41,6 +44,26 @@ export class EnvironmentConfigError extends Error {
     super(message);
     this.name = "EnvironmentConfigError";
   }
+}
+
+const seedEnvSchema = z.object({
+  SEED_ADMIN_EMAIL: z
+    .string()
+    .trim()
+    .pipe(z.email())
+    .transform((value) => value.toLowerCase()),
+  SEED_ADMIN_NAME: z.string().trim().min(2).max(100),
+  SEED_ADMIN_PASSWORD: z.string().min(12).max(128),
+});
+
+export type SeedConfig = Readonly<z.infer<typeof seedEnvSchema>>;
+
+export function parseSeedEnv(input: NodeJS.ProcessEnv): SeedConfig {
+  const result = seedEnvSchema.safeParse(input);
+  if (!result.success) {
+    throw new EnvironmentConfigError(`Invalid seed configuration. ${formatIssues(result.error)}`);
+  }
+  return Object.freeze(result.data);
 }
 
 function assertProductionSafety(config: z.infer<typeof envSchema>): void {

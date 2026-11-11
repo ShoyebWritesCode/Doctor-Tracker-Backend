@@ -3,81 +3,82 @@ import { createServer, type Server } from "node:http";
 import { createApp } from "./app.js";
 import { parseEnv } from "./config/env.js";
 import { createLogger } from "./config/logger.js";
+import { checkMongoReadiness, connectMongo, disconnectMongo } from "./database/mongo.js";
 
 const config = parseEnv(process.env);
 const logger = createLogger({ level: config.LOG_LEVEL, nodeEnv: config.NODE_ENV });
-const app = createApp({ logger });
-const server = createServer(app);
-
-server.headersTimeout = 65_000;
-server.keepAliveTimeout = 5_000;
-server.requestTimeout = 30_000;
-
+let server: Server | undefined;
 let shuttingDown = false;
 
 function closeServer(httpServer: Server): Promise<void> {
   return new Promise((resolve, reject) => {
-    httpServer.close((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve();
-    });
+    httpServer.close((error) => (error ? reject(error) : resolve()));
   });
 }
 
 async function shutdown(reason: string, exitCode: number): Promise<void> {
-  if (shuttingDown) {
-    return;
-  }
-
+  if (shuttingDown) return;
   shuttingDown = true;
   logger.info({ reason }, "Shutting down API server");
 
   const forceExitTimer = setTimeout(() => {
     logger.error("Graceful shutdown timed out");
-    server.closeAllConnections();
+    server?.closeAllConnections();
     process.exit(1);
   }, 10_000);
   forceExitTimer.unref();
 
   try {
-    await closeServer(server);
+    if (server) await closeServer(server);
+    await disconnectMongo(logger);
     clearTimeout(forceExitTimer);
-    logger.info("API server stopped");
+    logger.flush();
     process.exit(exitCode);
   } catch (error) {
     clearTimeout(forceExitTimer);
     logger.error({ err: error }, "Failed to stop API server cleanly");
+    logger.flush();
     process.exit(1);
   }
 }
 
-server.listen(config.PORT, config.HOST, () => {
-  logger.info({ host: config.HOST, port: config.PORT }, "Doctor Tracker API is listening");
-});
+async function start(): Promise<void> {
+  try {
+    await connectMongo({ logger, uri: config.MONGODB_URI });
+  } catch (error) {
+    logger.fatal({ err: error }, "MongoDB connection failed during startup");
+    logger.flush();
+    process.exitCode = 1;
+    return;
+  }
 
-server.on("error", (error) => {
-  logger.fatal({ err: error }, "API server failed");
-  void shutdown("server error", 1);
-});
+  const app = createApp({
+    isReady: checkMongoReadiness,
+    logger,
+    trustProxyHops: config.TRUST_PROXY_HOPS,
+  });
+  server = createServer(app);
+  server.headersTimeout = 65_000;
+  server.keepAliveTimeout = 5_000;
+  server.requestTimeout = 30_000;
+  server.on("error", (error) => {
+    logger.fatal({ err: error }, "API server failed");
+    void shutdown("server error", 1);
+  });
+  server.listen(config.PORT, config.HOST, () => {
+    logger.info({ host: config.HOST, port: config.PORT }, "Doctor Tracker API is listening");
+  });
+}
 
-process.once("SIGINT", () => {
-  void shutdown("SIGINT", 0);
-});
-
-process.once("SIGTERM", () => {
-  void shutdown("SIGTERM", 0);
-});
-
+process.once("SIGINT", () => void shutdown("SIGINT", 0));
+process.once("SIGTERM", () => void shutdown("SIGTERM", 0));
 process.once("uncaughtException", (error) => {
   logger.fatal({ err: error }, "Uncaught exception");
   void shutdown("uncaught exception", 1);
 });
-
 process.once("unhandledRejection", (reason) => {
   logger.fatal({ err: reason }, "Unhandled promise rejection");
   void shutdown("unhandled rejection", 1);
 });
+
+await start();
