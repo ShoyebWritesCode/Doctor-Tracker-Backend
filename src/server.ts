@@ -5,6 +5,7 @@ import { parseEnv } from "./config/env.js";
 import { createLogger } from "./config/logger.js";
 import { checkMongoReadiness, connectMongo, disconnectMongo } from "./database/mongo.js";
 import { createAuthRouter } from "./modules/auth/auth.routes.js";
+import { createDoctorRouter } from "./modules/doctors/doctor.routes.js";
 
 const config = parseEnv(process.env);
 const logger = createLogger({ level: config.LOG_LEVEL, nodeEnv: config.NODE_ENV });
@@ -58,6 +59,7 @@ async function start(): Promise<void> {
     logger,
     registerRoutes: (expressApp) => {
       expressApp.use("/api/v1/auth", createAuthRouter(config));
+      expressApp.use("/api/v1/doctors", createDoctorRouter(config));
     },
     trustProxyHops: config.TRUST_PROXY_HOPS,
   });

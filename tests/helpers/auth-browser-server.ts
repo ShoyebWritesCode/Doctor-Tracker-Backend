@@ -6,6 +6,8 @@ import { checkMongoReadiness, connectMongo, disconnectMongo } from "../../src/da
 import { AdminModel } from "../../src/modules/auth/admin.model.js";
 import { createAuthRouter } from "../../src/modules/auth/auth.routes.js";
 import { SessionModel } from "../../src/modules/auth/session.model.js";
+import { DoctorModel } from "../../src/modules/doctors/doctor.model.js";
+import { createDoctorRouter } from "../../src/modules/doctors/doctor.routes.js";
 import { seedAdmin } from "../../src/scripts/seed-admin.js";
 import { createTestLogger } from "./logger.js";
 
@@ -35,7 +37,11 @@ try {
     LOGIN_ACCOUNT_LIMIT: "50",
   });
   await connectMongo({ logger, uri: config.MONGODB_URI });
-  await Promise.all([AdminModel.syncIndexes(), SessionModel.syncIndexes()]);
+  await Promise.all([
+    AdminModel.syncIndexes(),
+    SessionModel.syncIndexes(),
+    DoctorModel.syncIndexes(),
+  ]);
   await seedAdmin({
     SEED_ADMIN_EMAIL: "browser-test@example.test",
     SEED_ADMIN_NAME: "Browser Test Administrator",
@@ -44,7 +50,10 @@ try {
   const app = createApp({
     logger,
     isReady: checkMongoReadiness,
-    registerRoutes: (expressApp) => expressApp.use("/api/v1/auth", createAuthRouter(config)),
+    registerRoutes: (expressApp) => {
+      expressApp.use("/api/v1/auth", createAuthRouter(config));
+      expressApp.use("/api/v1/doctors", createDoctorRouter(config));
+    },
   });
   server = createServer(app);
   await new Promise<void>((resolve, reject) => {
