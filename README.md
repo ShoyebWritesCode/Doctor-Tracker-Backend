@@ -58,8 +58,10 @@ Phase 04 adds doctor-scoped patient creation/listing/deletion and global patient
 
 Transaction rules, null/date semantics, failure behavior, and measured patient index plans are documented in [`docs/patient-api.md`](./docs/patient-api.md).
 
+Phase 05 adds `GET /api/v1/dashboard/summary`: all-time doctor/patient totals, a rounded average, range-specific patient creation totals, zero-filled daily trends, and up to ten ranked doctors. Queries accept local calendar dates and an IANA time zone, with inclusive start, exclusive end, and a 366-day maximum. Reads require authentication and disable caching. Boundary rules, consistency semantics and measured query plans are documented in [`docs/dashboard-analytics.md`](./docs/dashboard-analytics.md).
+
 ## Authentication browser tests
 
-`npm run test:auth-server` starts the actual authentication, doctor, and patient routes on port 4000 with an isolated, temporary MongoDB replica set. It creates the fictional account `browser-test@example.test` with password `fictional-browser-verification-only`. It does not read `.env` or connect to Atlas. All fixture data is discarded when the process stops.
+`npm run test:auth-server` starts the actual authentication, doctor, patient, and dashboard routes on port 4000 with an isolated, temporary MongoDB replica set. It creates the fictional account `browser-test@example.test` with password `fictional-browser-verification-only`. It does not read `.env` or connect to Atlas. All fixture data is discarded when the process stops.
 
 Run the frontend's authentication browser suite against this process from `http://localhost:3000`. Production origin validation remains enabled. Use these fixture credentials only for the disposable test server. To check the compiled application's native module loading, run `npm run build` followed by `npm run test:runtime`.
