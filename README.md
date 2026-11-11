@@ -19,6 +19,14 @@ npm run dev
 
 The API listens on `http://localhost:4000` by default. Check process liveness at `GET /health` and MongoDB readiness at `GET /ready`. The seed command is explicit and idempotent; application startup never creates accounts.
 
+## Fictional demo data
+
+After configuring the database, run `npm run seed:demo` to preview the missing demo records, then `npm run seed:demo -- --apply` to insert them explicitly. The dataset contains 24 doctors across 12 specialties and 256 patients, with varied statuses, conditions, contact completeness, birth dates, visits, and creation dates over roughly 90 days. Doctor counts include both seeded and manually added patients.
+
+All records are synthetic. Patient notes identify them as fictional, emails use reserved `.example.test` domains, and phone numbers use reserved `555-01xx` placeholders. No real patient information or clinical guidance is included.
+
+The seeder uses stable IDs and one transaction. It adds missing demo records only, preserves existing records and administrator edits, and rolls back on conflicts. Re-running it does not duplicate records or inflate doctor counts. Deliberately deleted demo records are considered missing and will be restored if the command is run again. It does not reset the database, reseed administrator credentials, or run on application startup or deployment.
+
 ## Commands
 
 | Command                    | Purpose                                  |
