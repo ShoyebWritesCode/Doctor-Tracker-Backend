@@ -33,6 +33,7 @@ doctorSchema.index(
   { name: "doctor_hospital_created" },
 );
 doctorSchema.index({ nameNormalized: 1, _id: 1 }, { name: "doctor_name" });
+doctorSchema.index({ patientCount: -1, name: 1, _id: 1 }, { name: "doctor_patient_ranking" });
 
 export type Doctor = InferSchemaType<typeof doctorSchema>;
 export const DoctorModel =
