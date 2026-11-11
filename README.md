@@ -42,6 +42,7 @@ The seeder uses stable IDs and one transaction. It adds missing demo records onl
 | `npm run test:runtime`     | Load compiled modules using native Node  |
 | `npm run test:auth-server` | Start disposable browser-test backend    |
 | `npm run test:coverage`    | Run tests with coverage                  |
+| `npm run test:load`        | Isolated, bounded read/login load smoke  |
 | `npm run format`           | Format supported files                   |
 | `npm run format:check`     | Check formatting without modifying files |
 
@@ -75,6 +76,7 @@ Verify `/health`, `/ready`, authentication, origin enforcement, private/no-store
 
 ## API contract
 
+- Coverage, query/index evidence, load-test method and limitations: [`docs/testing-and-performance.md`](./docs/testing-and-performance.md)
 - Security, request limits, logging privacy, and lifecycle policy: [`docs/security-and-operations.md`](./docs/security-and-operations.md)
 
 - OpenAPI draft: [`docs/openapi.yaml`](./docs/openapi.yaml)

@@ -109,6 +109,10 @@ export async function listPatients(query: PatientListQuery, scopedDoctorId?: str
   const filter = buildPatientFilter(
     scopedDoctorId ? { ...query, doctorId: scopedDoctorId } : query,
   );
+  const count = PatientModel.countDocuments(filter);
+  // Only unfiltered global counts use the existing ID index. Scoped/filtered
+  // counts must retain their selective doctor/status/condition indexes.
+  if (Object.keys(filter).length === 0) count.hint("_id_");
   const [patients, total] = await Promise.all([
     PatientModel.find(filter)
       .select(patientProjection)
@@ -121,7 +125,7 @@ export async function listPatients(query: PatientListQuery, scopedDoctorId?: str
       })
       .lean()
       .exec(),
-    PatientModel.countDocuments(filter).exec(),
+    count.exec(),
   ]);
   return {
     data: patients.map((patient) => toPatientDto(patient, patient.doctorId)),

@@ -52,6 +52,10 @@ export function buildDoctorSort(query: DoctorListQuery): Record<string, SortOrde
 
 export async function listDoctors(query: DoctorListQuery) {
   const filter = buildDoctorFilter(query);
+  const count = DoctorModel.countDocuments(filter);
+  // Empty-filter exact counts otherwise scan documents; reuse the existing ID
+  // index. Filtered counts retain the planner's selective-index choice.
+  if (Object.keys(filter).length === 0) count.hint("_id_");
   const [doctors, total] = await Promise.all([
     DoctorModel.find(filter)
       .select(doctorProjection)
@@ -60,7 +64,7 @@ export async function listDoctors(query: DoctorListQuery) {
       .limit(query.limit)
       .lean()
       .exec(),
-    DoctorModel.countDocuments(filter).exec(),
+    count.exec(),
   ]);
   return {
     data: doctors.map(toDoctorDto),
