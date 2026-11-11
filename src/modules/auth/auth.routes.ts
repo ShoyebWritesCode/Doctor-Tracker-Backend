@@ -4,7 +4,8 @@ import type { AppConfig } from "../../config/env.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { requireTrustedOrigin } from "../../common/middleware/origin.js";
 import { AdminModel, toAdminDto } from "./admin.model.js";
-import { serializeSessionCookie } from "./cookie.js";
+import { authenticate } from "./auth.middleware.js";
+import { serializeClearedSessionCookie, serializeSessionCookie } from "./cookie.js";
 import { createLoginRateLimiters } from "./login-rate-limit.js";
 import { verifyPassword } from "./password.js";
 import { SessionModel } from "./session.model.js";
@@ -91,6 +92,23 @@ export function createAuthRouter(config: AppConfig): Router {
         }),
       );
       response.status(200).json({ data: toAdminDto(admin) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/me", authenticate(config), (request, response) => {
+    response.status(200).json({ data: request.auth?.admin });
+  });
+
+  router.post("/logout", origin, authenticate(config), async (request, response, next) => {
+    try {
+      await SessionModel.deleteOne({ _id: request.auth?.sessionId }).exec();
+      response.setHeader(
+        "Set-Cookie",
+        serializeClearedSessionCookie(config.SESSION_COOKIE_NAME, config.COOKIE_SECURE),
+      );
+      response.status(204).end();
     } catch (error) {
       next(error);
     }

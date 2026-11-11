@@ -1,6 +1,6 @@
 # Doctor Tracker API
 
-The standalone REST API for Doctor Tracker, an authenticated administrative application for managing doctors, their patients, and operational analytics. The service is built with Express and strict TypeScript; MongoDB persistence and session authentication are introduced in the next implementation phase.
+The standalone REST API for Doctor Tracker, an authenticated administrative application for managing doctors, their patients, and operational analytics. The service is built with Express, strict TypeScript, MongoDB, and revocable opaque sessions.
 
 ## Prerequisites
 
@@ -12,10 +12,11 @@ The standalone REST API for Doctor Tracker, an authenticated administrative appl
 ```bash
 cp .env.example .env
 npm ci
+npm run seed:admin
 npm run dev
 ```
 
-The API listens on `http://localhost:4000` by default. Check liveness at `GET /health`.
+The API listens on `http://localhost:4000` by default. Check process liveness at `GET /health` and MongoDB readiness at `GET /ready`. The seed command is explicit and idempotent; application startup never creates accounts.
 
 ## Commands
 
@@ -24,6 +25,7 @@ The API listens on `http://localhost:4000` by default. Check liveness at `GET /h
 | `npm run dev`           | Run the API in watch mode                |
 | `npm run build`         | Compile production JavaScript to `dist/` |
 | `npm start`             | Run the compiled server                  |
+| `npm run seed:admin`    | Create or update the configured admin    |
 | `npm run lint`          | Run ESLint with zero warnings            |
 | `npm run typecheck`     | Check TypeScript without emitting files  |
 | `npm test`              | Run Vitest in watch mode                 |
@@ -34,7 +36,7 @@ The API listens on `http://localhost:4000` by default. Check liveness at `GET /h
 
 ## Environment
 
-Copy `.env.example` to `.env`. The application validates configuration before opening a port and refuses unsafe production combinations. Seed credentials are placeholders for the explicit seed script added during the authentication phase; startup never seeds data.
+Copy `.env.example` to `.env`. Set `MONGODB_URI`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_NAME`, and a local-only `SEED_ADMIN_PASSWORD` before running the seed command. The application validates configuration before opening a port and refuses unsafe production combinations. Never commit `.env` or real credentials.
 
 ## API contract
 
@@ -43,4 +45,4 @@ Copy `.env.example` to `.env`. The application validates configuration before op
 
 ## Current implementation status
 
-Phase 01 establishes the service foundation: application/server separation, validated environment, structured logging, request IDs, safe error responses, tests, and CI. Database-backed features are implemented in subsequent phases.
+Phases 01-02 establish the service foundation, MongoDB lifecycle, administrator persistence, Argon2id password hashing, explicit seeding, origin enforcement, login throttling, and revocable `HttpOnly` sessions.
