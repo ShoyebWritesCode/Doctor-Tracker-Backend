@@ -6,7 +6,15 @@ Doctor Tracker is an administrator workspace for doctors, their assigned patient
 
 ## Reviewer access
 
-There is one actor: an administrator. Request the production demo password privately from the project owner; credentials are not published in Git. There is no public registration, email verification or doctor/patient login. Disposable credentials below do **not** authenticate to production. The [frontend README](https://github.com/ShoyebWritesCode/Doctor-Tracker-Frontend#readme) contains the product walkthrough and desktop/mobile screenshots.
+There is one actor: an administrator. Use the following credentials to access the deployed fictional-data demo:
+
+- Application: [Doctor Tracker](https://doctor-tracker-shoyeb.vercel.app)
+- Email: `admin@example.test`
+- Password: `CGG6NjlLjeucSEhQgw0VJxltfiyS1A_Q`
+
+These credentials are intentionally public with the owner's approval. They grant full demo-administrator access, including editing and deleting demo records. Use fictional data only and never reuse this password for a real account or real-data environment. There is no public registration, email verification, or doctor/patient login. The disposable local credentials below are separate from this deployed demo login.
+
+See the [frontend README](https://github.com/ShoyebWritesCode/Doctor-Tracker-Frontend#readme) for the product walkthrough and desktop/mobile screenshots.
 
 ## Local installation
 
@@ -58,7 +66,7 @@ npm run dev
 
 ## Environment
 
-See [`.env.example`](.env.example). Configuration is validated before listening. Never commit `.env`, database credentials, seed passwords or session cookies.
+See [`.env.example`](.env.example). Configuration is validated before listening. Never commit `.env`, database credentials, private seed passwords or session cookies. The intentionally public fictional-demo login in Access is the owner-approved exception, not a pattern for real credentials.
 
 | Variable                                                     | Local default/example          | Purpose                                                                                        |
 | ------------------------------------------------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------- |

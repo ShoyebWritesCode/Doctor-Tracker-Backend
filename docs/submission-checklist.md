@@ -22,7 +22,7 @@ Both services are deployed already. This phase finalizes documentation and repro
 - [API contract](https://doctor-tracker-api-shoyeb.vercel.app/api-docs/openapi.json)
 - [Liveness](https://doctor-tracker-api-shoyeb.vercel.app/health) / [readiness](https://doctor-tracker-api-shoyeb.vercel.app/ready)
 
-Share the production demo password privately with the reviewer; do not commit it or place it in screenshots. No submission has been sent on the owner's behalf. Local fixture credentials are intentionally public, fictional and isolated from production.
+The owner explicitly approved publishing the deployed fictional-demo email/password in both README Access sections. That login grants full demo-administrator access, including destructive record actions; it is not a private credential or suitable for a real-data environment. Database credentials, cookies and unrelated secrets remain private. No submission has been sent on the owner's behalf. The local fixture credentials are separate from the deployed demo login.
 
 ## Reproducibility and safe checks
 
