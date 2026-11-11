@@ -41,6 +41,30 @@ The API listens on `http://localhost:4000` by default. Check process liveness at
 
 Copy `.env.example` to `.env`. Set `MONGODB_URI`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_NAME`, and a local-only `SEED_ADMIN_PASSWORD` before running the seed command. The application validates configuration before opening a port and refuses unsafe production combinations. Never commit `.env` or real credentials.
 
+## Vercel deployment
+
+The root `index.ts` exports the Express application for Vercel; `src/server.ts` remains the standalone server with graceful shutdown. Both use the same route composition. Vercel connects to MongoDB lazily, shares one in-flight connection per instance, reuses warm connections, and caps each pool at five connections. Health checks do not require MongoDB; readiness checks do.
+
+Login throttling uses atomic MongoDB counters shared across instances, not process-local memory. Keys are digests, windows are 15 minutes, expired counters have a TTL index, and throttled responses include `Retry-After`. If the shared store is unavailable, sign-in fails closed.
+
+Before deploying, create all schema-defined indexes (including `login_attempt_expiry_ttl`) and seed the administrator explicitly from a trusted local environment. Production disables automatic index creation. Do not upload seed passwords to the hosting service.
+
+Set these production-only variables in the backend project's Vercel environment:
+
+| Variable           | Value                                                          |
+| ------------------ | -------------------------------------------------------------- |
+| `NODE_ENV`         | `production`                                                   |
+| `MONGODB_URI`      | Server-only Atlas connection string; mark sensitive            |
+| `FRONTEND_ORIGIN`  | Exact HTTPS production frontend origin                         |
+| `COOKIE_SECURE`    | `true`                                                         |
+| `TRUST_PROXY_HOPS` | `1` for the Vercel-managed proxy; reassess if topology changes |
+
+The frontend sets server-only `API_PROXY_TARGET` to this backend's HTTPS origin and keeps browser requests on `/api/v1`. Session cookies stay HttpOnly, Secure, host-only, and scoped to `/api/v1`. Production Atlas credentials must not be made available to preview builds or the browser. Use separate infrastructure if authenticated previews are needed.
+
+`vercel.json` selects the Express framework and one Mumbai function region near the Atlas cluster. A Hobby deployment has dynamic outbound IPs; any broader Atlas network allowlist must be an explicit operator decision. Database authentication and TLS remain mandatory. Never enable paid networking automatically.
+
+Verify `/health`, `/ready`, authentication, origin enforcement, private/no-store responses, and actual CRUD workflows after deployment. A successful build alone is not a successful release.
+
 ## API contract
 
 - OpenAPI draft: [`docs/openapi.yaml`](./docs/openapi.yaml)

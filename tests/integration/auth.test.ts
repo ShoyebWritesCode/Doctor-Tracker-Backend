@@ -1,15 +1,17 @@
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import request from "supertest";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createApp } from "../../src/app.js";
 import { type AppConfig } from "../../src/config/env.js";
 import { AdminModel } from "../../src/modules/auth/admin.model.js";
 import { createAuthRouter } from "../../src/modules/auth/auth.routes.js";
+import { LoginAttemptModel } from "../../src/modules/auth/login-attempt.model.js";
 import { hashPassword, verifyPassword } from "../../src/modules/auth/password.js";
 import { SessionModel } from "../../src/modules/auth/session.model.js";
 import { hashSessionToken } from "../../src/modules/auth/session-token.js";
 import { seedAdmin } from "../../src/scripts/seed-admin.js";
+import { createRuntimeApp } from "../../src/runtime.js";
 import { createTestLogger } from "../helpers/logger.js";
 
 const config: AppConfig = Object.freeze({
@@ -48,11 +50,20 @@ async function createAdmin(overrides: { email?: string; status?: "active" | "dis
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri("doctor_tracker"));
-  await Promise.all([AdminModel.syncIndexes(), SessionModel.syncIndexes()]);
+  await Promise.all([
+    AdminModel.syncIndexes(),
+    SessionModel.syncIndexes(),
+    LoginAttemptModel.syncIndexes(),
+  ]);
 });
 
 afterEach(async () => {
-  await Promise.all([AdminModel.deleteMany({}), SessionModel.deleteMany({})]);
+  vi.restoreAllMocks();
+  await Promise.all([
+    AdminModel.deleteMany({}),
+    SessionModel.deleteMany({}),
+    LoginAttemptModel.deleteMany({}),
+  ]);
 });
 
 afterAll(async () => {
@@ -226,6 +237,57 @@ describe("administrator authentication", () => {
     const limited = await attempt().expect(429);
     expect(limited.body as unknown).toMatchObject({ error: { code: "RATE_LIMITED" } });
     expect(limited.headers["ratelimit-remaining"]).toBe("0");
+  });
+
+  it("shares atomic login limits across separate application instances", async () => {
+    const limitedConfig = { ...config, LOGIN_ACCOUNT_LIMIT: 3 };
+    const apps = [
+      createRuntimeApp(limitedConfig, createTestLogger()),
+      createRuntimeApp(limitedConfig, createTestLogger()),
+    ];
+    const responses = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        request(apps[index % 2]!)
+          .post("/api/v1/auth/login")
+          .set("Origin", config.FRONTEND_ORIGIN)
+          .send({ email: "SHARED@example.test", password: "fictional wrong password" }),
+      ),
+    );
+    expect(responses.filter((response) => response.status === 401)).toHaveLength(3);
+    expect(responses.filter((response) => response.status === 429)).toHaveLength(5);
+    for (const response of responses.filter((response) => response.status === 429))
+      expect(Number(response.headers["retry-after"])).toBeGreaterThan(0);
+    const counters = await LoginAttemptModel.find().lean();
+    expect(counters).toHaveLength(2);
+    expect(counters.every((counter) => /^[a-f0-9]{64}$/.test(counter._id))).toBe(true);
+    expect(JSON.stringify(counters)).not.toContain("shared@example.test");
+  });
+
+  it("fails sign-in closed when its shared rate-limit store is unavailable", async () => {
+    vi.spyOn(LoginAttemptModel, "findOneAndUpdate").mockImplementation(() => {
+      throw new Error("Fictional database outage");
+    });
+    const response = await request(buildApp())
+      .post("/api/v1/auth/login")
+      .set("Origin", config.FRONTEND_ORIGIN)
+      .send({ email: "admin@example.test", password: "fictional password" })
+      .expect(503);
+    expect(response.body as unknown).toMatchObject({ error: { code: "SERVICE_UNAVAILABLE" } });
+    expect(await SessionModel.countDocuments()).toBe(0);
+  });
+
+  it("prepares the database for serverless requests without making liveness depend on it", async () => {
+    const prepare = vi.fn().mockResolvedValue(undefined);
+    const app = createRuntimeApp(config, createTestLogger(), prepare);
+    await request(app).get("/health").expect(200);
+    expect(prepare).not.toHaveBeenCalled();
+    await request(app).get("/ready").expect(200);
+    expect(prepare).toHaveBeenCalledTimes(1);
+    await request(app).get("/api/v1/doctors").expect(401);
+    expect(prepare).toHaveBeenCalledTimes(2);
+    prepare.mockRejectedValueOnce(new Error("Fictional database outage"));
+    const failure = await request(app).get("/api/v1/doctors").expect(503);
+    expect(failure.body as unknown).toMatchObject({ error: { code: "SERVICE_UNAVAILABLE" } });
   });
 
   it("seeds one administrator idempotently and updates its configured credentials", async () => {

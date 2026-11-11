@@ -6,6 +6,7 @@ import { checkMongoReadiness, connectMongo, disconnectMongo } from "../../src/da
 import { AdminModel } from "../../src/modules/auth/admin.model.js";
 import { createAuthRouter } from "../../src/modules/auth/auth.routes.js";
 import { SessionModel } from "../../src/modules/auth/session.model.js";
+import { LoginAttemptModel } from "../../src/modules/auth/login-attempt.model.js";
 import { DoctorModel } from "../../src/modules/doctors/doctor.model.js";
 import { createDoctorRouter } from "../../src/modules/doctors/doctor.routes.js";
 import { PatientModel } from "../../src/modules/patients/patient.model.js";
@@ -47,6 +48,7 @@ try {
   await Promise.all([
     AdminModel.syncIndexes(),
     SessionModel.syncIndexes(),
+    LoginAttemptModel.syncIndexes(),
     DoctorModel.syncIndexes(),
     PatientModel.syncIndexes(),
   ]);
